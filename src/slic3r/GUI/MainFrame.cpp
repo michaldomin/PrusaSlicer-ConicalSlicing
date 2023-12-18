@@ -340,7 +340,7 @@ static void append_tab_menu_items_to_menubar(wxMenuBar* bar, PrinterTechnology p
         bar->Append(new wxMenu(), pref() + _L("Plater") + suff());
     for (const wxString& title : { is_mainframe_menu    ? _L("Print Settings")       : pref() + _L("Print Settings") + suff(),
                                    pt == ptSLA          ? _L("Material Settings")    : _L("Filament Settings"),
-                                   _L("Printer Settings") })
+                                   _L("Printer Settings"),  _L("Conical Pronting") })
         bar->Append(new wxMenu(), title);
 }
 
@@ -396,6 +396,8 @@ static void add_tabs_as_menu(wxMenuBar* bar, MainFrame* main_frame, wxWindow* ba
             main_frame->select_tab(wxGetApp().get_tab(Preset::TYPE_SLA_MATERIAL));
         else if (title == _L("Printer Settings"))
             main_frame->select_tab(wxGetApp().get_tab(Preset::TYPE_PRINTER));
+        else if (title == _L("Conical Printing"))
+            main_frame->select_tab(wxGetApp().get_tab(Preset::TYPE_CONICAL));
 
         // update markers for selected/unselected menu items
         update_marker_for_tabs_menu(bar, title, is_mainframe_menu);
@@ -864,6 +866,7 @@ void MainFrame::create_preset_tabs()
     add_created_tab(new TabSLAPrint(m_tabpanel), "cog");
     add_created_tab(new TabSLAMaterial(m_tabpanel), "resin");
     add_created_tab(new TabPrinter(m_tabpanel), wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() == ptFFF ? "printer" : "sla_printer");
+    add_created_tab(new TabConical(m_tabpanel), "printer");
 }
 
 void MainFrame::add_created_tab(Tab* panel,  const std::string& bmp_name /*= ""*/)
@@ -1502,6 +1505,10 @@ void MainFrame::init_menubar_as_editor()
             [this/*, tab_offset*/](wxCommandEvent&) { select_tab(3); }, "printer", nullptr,
             []() {return true; }, this);
         m_changeable_menu_items.push_back(item_printer_tab);
+        wxMenuItem* item_conical_tab = append_menu_item(windowMenu, wxID_HIGHEST + 7, _L("Conical Printing Tab"), _L("Show conical printing settings"),
+            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(4); }, "printer", nullptr,
+            []() {return true; }, this);
+        m_changeable_menu_items.push_back(item_conical_tab);
         if (m_plater) {
             windowMenu->AppendSeparator();
             append_menu_item(windowMenu, wxID_HIGHEST + 5, _L("3&D") + "\tCtrl+5", _L("Show the 3D editing view"),

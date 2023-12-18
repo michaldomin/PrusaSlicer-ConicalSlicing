@@ -5639,5 +5639,119 @@ ConfigManipulation Tab::get_config_manipulation()
 }
 
 
-} // GUI
-} // Slic3r
+void TabConical::build() {
+    m_presets = &m_preset_bundle->sla_materials;
+    load_initial_data();
+
+    auto page = add_options_page(L("Material"), "resin");
+
+    auto optgroup = page->new_optgroup(L("Material"));
+    optgroup->append_single_option_line("material_colour");
+    optgroup->append_single_option_line("bottle_cost");
+    optgroup->append_single_option_line("bottle_volume");
+    optgroup->append_single_option_line("bottle_weight");
+    optgroup->append_single_option_line("material_density");
+
+    optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
+        if (opt_key == "material_colour") {
+            update_dirty();
+            on_value_change(opt_key, value);
+            return;
+        }
+
+        DynamicPrintConfig new_conf = *m_config;
+
+        if (opt_key == "bottle_volume") {
+            double new_bottle_weight = boost::any_cast<double>(value) * (new_conf.option("material_density")->getFloat() / 1000);
+            new_conf.set_key_value("bottle_weight", new ConfigOptionFloat(new_bottle_weight));
+        }
+        if (opt_key == "bottle_weight") {
+            double new_bottle_volume = boost::any_cast<double>(value) / new_conf.option("material_density")->getFloat() * 1000;
+            new_conf.set_key_value("bottle_volume", new ConfigOptionFloat(new_bottle_volume));
+        }
+        if (opt_key == "material_density") {
+            double new_bottle_volume = new_conf.option("bottle_weight")->getFloat() / boost::any_cast<double>(value) * 1000;
+            new_conf.set_key_value("bottle_volume", new ConfigOptionFloat(new_bottle_volume));
+        }
+
+        load_config(new_conf);
+
+        update_dirty();
+
+        // Change of any from those options influences for an update of "Sliced Info"
+        wxGetApp().sidebar().update_sliced_info_sizer();
+        wxGetApp().sidebar().Layout();
+    };
+
+    optgroup = page->new_optgroup(L("Layers"));
+    optgroup->append_single_option_line("initial_layer_height");
+
+    optgroup = page->new_optgroup(L("Exposure"));
+    optgroup->append_single_option_line("exposure_time");
+    optgroup->append_single_option_line("initial_exposure_time");
+
+    optgroup  = page->new_optgroup(L("Corrections"));
+    auto line = Line{m_config->def()->get("material_correction")->full_label, ""};
+    for (auto &axis : {"X", "Y", "Z"}) {
+        auto opt      = optgroup->get_option(std::string("material_correction_") + char(std::tolower(axis[0])));
+        opt.opt.label = axis;
+        line.append_option(opt);
+    }
+
+    optgroup->append_line(line);
+
+    page                  = add_options_page(L("Notes"), "note");
+    optgroup              = page->new_optgroup(L("Notes"), 0);
+    optgroup->label_width = 0;
+    Option option         = optgroup->get_option("material_notes");
+    option.opt.full_width = true;
+    option.opt.height     = 25; // 250;
+    optgroup->append_single_option_line(option);
+
+    page     = add_options_page(L("Dependencies"), "wrench");
+    optgroup = page->new_optgroup(L("Profile dependencies"));
+
+    create_line_with_widget(optgroup.get(), "compatible_printers", "",
+                            [this](wxWindow *parent) { return compatible_widget_create(parent, m_compatible_printers); });
+
+    option                = optgroup->get_option("compatible_printers_condition");
+    option.opt.full_width = true;
+    optgroup->append_single_option_line(option);
+
+    create_line_with_widget(optgroup.get(), "compatible_prints", "",
+                            [this](wxWindow *parent) { return compatible_widget_create(parent, m_compatible_prints); });
+
+    option                = optgroup->get_option("compatible_prints_condition");
+    option.opt.full_width = true;
+    optgroup->append_single_option_line(option);
+
+    build_preset_description_line(optgroup.get());
+
+    page     = add_options_page(L("Material printing profile"), "note");
+    optgroup = page->new_optgroup(L("Material printing profile"));
+    option   = optgroup->get_option("material_print_speed");
+    optgroup->append_single_option_line(option);
+}
+
+void TabConical::toggle_options()
+{
+    const Preset &current_printer = wxGetApp().preset_bundle->printers.get_edited_preset();
+    std::string   model           = current_printer.config.opt_string("printer_model");
+    m_config_manipulation.toggle_field("material_print_speed", model != "SL1");
+}
+
+void TabConical::update()
+{
+    update_description_lines();
+    Layout();
+
+    // #ys_FIXME. Just a template for this function
+    //     m_update_cnt++;
+    //     ! something to update
+    //     m_update_cnt--;
+    //
+    //     if (m_update_cnt == 0)
+    wxGetApp().mainframe->on_config_changed(m_config);
+}
+
+}} // Slic3r

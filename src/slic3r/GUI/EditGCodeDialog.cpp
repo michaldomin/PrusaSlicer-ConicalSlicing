@@ -268,6 +268,11 @@ wxDataViewItem EditGCodeDialog::add_presets_placeholders()
         if (const ConfigOption *optptr = full_config.optptr(opt))
             m_params_list->AppendParam(printer, optptr->is_scalar() ? ParamType::Scalar : ParamType::Vector, opt);
 
+    wxDataViewItem conical = m_params_list->AppendSubGroup(group, _L("Conical Printing"), is_fff ? "printer" : "sla_printer");
+    for (const auto &opt : printer_options)
+        if (const ConfigOption *optptr = full_config.optptr(opt))
+            m_params_list->AppendParam(conical, optptr->is_scalar() ? ParamType::Scalar : ParamType::Vector, opt);
+
     return group;
 }
 

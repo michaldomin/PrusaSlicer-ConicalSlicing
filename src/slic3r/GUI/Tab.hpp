@@ -599,6 +599,19 @@ public:
 	bool 		supports_printer_technology(const PrinterTechnology tech) const override { return tech == ptSLA; }
 };
 
+class TabConical : public Tab
+{
+private:
+public:
+    TabConical(wxBookCtrlBase *parent) : Tab(parent, _L("Conical Printing"), Slic3r::Preset::TYPE_CONICAL) {}
+    ~TabConical() {}
+
+    void build() override;
+    void toggle_options() override;
+    void update() override;
+    bool supports_printer_technology(const PrinterTechnology tech) const override { return true; }
+};
+
 } // GUI
 } // Slic3r
 
