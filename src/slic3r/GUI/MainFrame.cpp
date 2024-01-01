@@ -872,6 +872,12 @@ void MainFrame::create_preset_tabs()
 void MainFrame::add_created_tab(Tab* panel,  const std::string& bmp_name /*= ""*/)
 {
     panel->create_preset_tab();
+    //std::cout << panel->title() << std::endl;
+    //if (bmp_name == "printer")
+    //{
+    //    std::cout<<"printer"<<std::endl;
+    //}
+    //panel->create_preset_tab();
 
     const auto printer_tech = wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology();
 

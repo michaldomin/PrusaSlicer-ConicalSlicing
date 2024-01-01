@@ -52,6 +52,7 @@ public:
     PresetCollection            sla_prints;
     PresetCollection            filaments;
     PresetCollection            sla_materials;
+    PresetCollection            conical;
 	PresetCollection& 			materials(PrinterTechnology pt)       { return pt == ptFFF ? this->filaments : this->sla_materials; }
 	const PresetCollection& 	materials(PrinterTechnology pt) const { return pt == ptFFF ? this->filaments : this->sla_materials; }
     PrinterPresetCollection     printers;

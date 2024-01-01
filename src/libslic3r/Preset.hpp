@@ -234,6 +234,7 @@ public:
 
     static const std::vector<std::string>&  sla_printer_options();
     static const std::vector<std::string>&  sla_material_options();
+    static const std::vector<std::string>&  conical_options();
     static const std::vector<std::string>&  sla_print_options();
 
 	static void                             update_suffix_modified(const std::string& new_suffix_modified);

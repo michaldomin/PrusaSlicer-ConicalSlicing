@@ -1264,6 +1264,7 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
 
     // list of the presets with unsaved changes
     std::vector<PresetCollection*> presets_list;
+    std::cout << type << std::endl;
     if (type == Preset::TYPE_INVALID)
     {
         PrinterTechnology printer_technology = wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology();
@@ -1302,9 +1303,10 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
 
             m_tree->Append("extruders_count", type, _L("General"), _L("Capabilities"), local_label, old_val, mod_val, new_val, category_icon_map.at("General"));
         }
-
+        
         for (const std::string& opt_key : dirty_options) {
             const Search::Option& option = searcher.get_option(opt_key, type);
+            std::cout << opt_key << std::endl;
             if (option.opt_key() != opt_key) {
                 // When founded option isn't the correct one.
                 // It can be for dirty_options: "default_print_profile", "printer_model", "printer_settings_id",
