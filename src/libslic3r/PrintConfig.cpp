@@ -4300,6 +4300,13 @@ void PrintConfigDef::init_sla_params()
     def->min = float(SCALING_FACTOR);
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.001));
+
+    def = this->add("active_conical_slicing", coBool);
+    def->label = L("Active conical slicing");
+    def->category = L("Conical");
+    def->tooltip = L("Enable conical slicing");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
 }
 
 // Ignore the following obsolete configuration keys:
