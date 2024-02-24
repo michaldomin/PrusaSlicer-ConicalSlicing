@@ -770,6 +770,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionBool,                use_relative_e_distances))
     ((ConfigOptionBool,                use_volumetric_e))
     ((ConfigOptionBool,                variable_layer_height))
+    ((ConfigOptionBool,                active_conical_slicing))
     ((ConfigOptionFloat,               cooling_tube_retraction))
     ((ConfigOptionFloat,               cooling_tube_length))
     ((ConfigOptionBool,                high_current_on_filament_swap))

@@ -3245,6 +3245,13 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
+    def           = this->add("active_conical_slicing", coBool);
+    def->label    = L("Active conical slicing");
+    def->category = L("Conical");
+    def->tooltip  = L("Enable conical slicing");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("wipe", coBools);
     def->label = L("Wipe while retracting");
     def->tooltip = L("This flag will move the nozzle while retracting to minimize the possible blob "
