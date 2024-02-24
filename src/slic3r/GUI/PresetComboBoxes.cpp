@@ -111,6 +111,11 @@ PresetComboBox::PresetComboBox(wxWindow* parent, Preset::Type preset_type, const
         m_main_bitmap_name = "printer";
         break;
     }
+    case Preset::TYPE_CONICAL: {
+        m_collection       = &m_preset_bundle->printers;
+        m_main_bitmap_name = "printer";
+        break;
+    }
     default: break;
     }
 
