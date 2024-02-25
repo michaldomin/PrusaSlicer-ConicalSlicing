@@ -1783,6 +1783,11 @@ void TabPrint::build()
         optgroup->append_single_option_line(option);
 
         build_preset_description_line(optgroup.get());
+
+    page = add_options_page(L("Conical Slicing"), "printer");
+
+        optgroup = page->new_optgroup(L("Conical Slicing"));
+        optgroup->append_single_option_line("active_conical_slicing");
 }
 
 void TabPrint::update_description_lines()

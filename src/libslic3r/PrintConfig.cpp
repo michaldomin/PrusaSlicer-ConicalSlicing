@@ -3481,6 +3481,15 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(85, true));
 
+    //conical slicing options
+
+    def           = this->add("active_conical_slicing", coBool);
+    def->label    = L("Active conical slicing");
+    def->category = L("Conical");
+    def->tooltip  = L("Enable conical slicing");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+
     // Declare retract values for filament profile, overriding the printer's extruder profile.
     for (const char *opt_key : {
         // floats
