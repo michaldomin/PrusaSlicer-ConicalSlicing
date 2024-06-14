@@ -1744,6 +1744,8 @@ struct Plater::priv
     Slic3r::Model               model;
     PrinterTechnology           printer_technology = ptFFF;
     Slic3r::GCodeProcessorResult gcode_result;
+    std::vector<TriangleMesh>    meshes_backup;
+
 
     // GUI elements
     wxSizer* panel_sizer{ nullptr };
@@ -1975,6 +1977,10 @@ struct Plater::priv
 			GUI::show_error(this->q, msg);
 		}
 	}
+
+    void apply_conical_transformation();
+    void load_oryginal_meshes();
+
     void export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job);
     void reload_from_disk();
     bool replace_volume_with_stl(int object_idx, int volume_idx, const fs::path& new_path, const wxString& snapshot = "");
@@ -2420,8 +2426,10 @@ void Plater::priv::apply_free_camera_correction(bool apply/* = true*/)
 
 void Plater::priv::select_view_3D(const std::string& name)
 {
-    if (name == "3D")
+    if (name == "3D") {
+        load_oryginal_meshes();
         set_current_panel(view3D);
+    }
     else if (name == "Preview")
         set_current_panel(preview);
 
@@ -3509,6 +3517,9 @@ bool Plater::priv::restart_background_process(unsigned int state)
            (state & UPDATE_BACKGROUND_PROCESS_FORCE_EXPORT) != 0 ||
            (state & UPDATE_BACKGROUND_PROCESS_RESTART) != 0 ) ) {
         // The print is valid and it can be started.
+
+        apply_conical_transformation();
+
         if (this->background_process.start()) {
 //            this->statusbar()->set_cancel_callback([this]() {
 //                this->statusbar()->set_status_text(_L("Cancelling"));
@@ -3520,6 +3531,49 @@ bool Plater::priv::restart_background_process(unsigned int state)
         }
     }
     return false;
+}
+
+void Plater::priv::apply_conical_transformation() { 
+    std::cout<<"Applying conical transformation"<<std::endl;
+
+    meshes_backup.clear();
+
+    auto mesh = this->sidebar->obj_list()->object(0)->mesh();
+
+    meshes_backup.push_back(mesh);
+  
+    indexed_triangle_set copied_mesh;
+
+    copied_mesh.indices  = std::move(mesh.its.indices);
+    copied_mesh.vertices = std::move(mesh.its.vertices);
+
+    stl_vertex translation;
+    translation << 5, -5, 5;
+
+    copied_mesh.vertices[0] += translation;
+
+    this->sidebar->obj_list()->delete_all_objects_from_list();
+
+    model.clear_objects();
+
+    this->sidebar->obj_list()->load_mesh_object(TriangleMesh(copied_mesh), "Transformed Mesh");
+
+    background_process.apply(q->model(), wxGetApp().preset_bundle->full_config());
+}
+
+void Plater::priv::load_oryginal_meshes()
+{
+    if (meshes_backup.empty())
+		return;
+
+    this->sidebar->obj_list()->delete_all_objects_from_list();
+
+    model.clear_objects();
+
+    for (auto mesh : meshes_backup)
+		this->sidebar->obj_list()->load_mesh_object(mesh, "BackUped Mesh");
+
+    meshes_backup.clear();
 }
 
 void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)
