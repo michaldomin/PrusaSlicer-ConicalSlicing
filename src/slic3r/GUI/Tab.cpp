@@ -1788,6 +1788,8 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(L("Conical Slicing"));
         optgroup->append_single_option_line("active_conical_slicing");
+        optgroup->append_single_option_line("non_planar_angle");
+        optgroup->append_single_option_line("non_planar_max_height");
 }
 
 void TabPrint::update_description_lines()

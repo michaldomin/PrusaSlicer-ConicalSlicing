@@ -557,6 +557,9 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloatOrPercent,      min_bead_width))
     //Conical slicing options
     ((ConfigOptionBool,                active_conical_slicing))
+    ((ConfigOptionInt,                 non_planar_angle))
+    ((ConfigOptionFloat,               non_planar_max_height))
+
     ((ConfigOptionBool,                support_material))
     // Automatic supports (generated based fdm support point generator).
     ((ConfigOptionBool,                support_material_auto))

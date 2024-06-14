@@ -3490,6 +3490,20 @@ void PrintConfigDef::init_fff_params()
     def->mode     = comSimple;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def           = this->add("non_planar_angle", coInt);
+    def->label    = L("Non planar slicing max angle");
+    def->category = L("Conical");
+    def->tooltip  = L("Set non planar slicing max angle");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def           = this->add("non_planar_max_height", coFloat);
+    def->label    = L("Non planar slicing max height");
+    def->category = L("Conical");
+    def->tooltip  = L("Set non planar slicing max height");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionFloat(0));
+
     // Declare retract values for filament profile, overriding the printer's extruder profile.
     for (const char *opt_key : {
         // floats
