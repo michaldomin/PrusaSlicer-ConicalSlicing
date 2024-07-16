@@ -558,6 +558,8 @@ PRINT_CONFIG_CLASS_DEFINE(
     //Conical slicing options
     ((ConfigOptionBool,                active_conical_slicing))
     ((ConfigOptionInt,                 non_planar_angle))
+    ((ConfigOptionInt,                 refinement_iterations))
+    ((ConfigOptionBool,                inward_cone))
     ((ConfigOptionFloat,               non_planar_max_height))
 
     ((ConfigOptionBool,                support_material))

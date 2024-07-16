@@ -474,7 +474,7 @@ static std::vector<std::string> s_Preset_print_options {
     "perimeter_generator", "wall_transition_length", "wall_transition_filter_deviation", "wall_transition_angle",
     "wall_distribution_count", "min_feature_size", "min_bead_width",
     //conical slicing options
-    "active_conical_slicing", "non_planar_angle", "non_planar_max_height"
+    "active_conical_slicing", "non_planar_angle", "refinement_iterations", "inward_cone", "non_planar_max_height"
 };
 
 static std::vector<std::string> s_Preset_filament_options {

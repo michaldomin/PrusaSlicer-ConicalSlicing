@@ -3497,6 +3497,20 @@ void PrintConfigDef::init_fff_params()
     def->mode     = comSimple;
     def->set_default_value(new ConfigOptionInt(0));
 
+    def           = this->add("refinement_iterations", coInt);
+    def->label    = L("Number of refinement_triangulation iterations");
+    def->category = L("Conical");
+    def->tooltip  = L("If sliced object not looks how it should increase it.\nIf slicing takes to long decrease it.");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def           = this->add("inward_cone", coBool);
+    def->label    = L("Inward cone type");
+    def->category = L("Conical");
+    def->tooltip  = L("Select only for shape you are sure it will work correctly.");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def           = this->add("non_planar_max_height", coFloat);
     def->label    = L("Non planar slicing max height");
     def->category = L("Conical");

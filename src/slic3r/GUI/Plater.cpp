@@ -143,6 +143,9 @@
 
 #include "Widgets/CheckBox.hpp"
 
+#include "libslic3r/ConicalTransform.hpp"
+
+
 using boost::optional;
 namespace fs = boost::filesystem;
 using Slic3r::_3DScene;
@@ -1744,7 +1747,7 @@ struct Plater::priv
     Slic3r::Model               model;
     PrinterTechnology           printer_technology = ptFFF;
     Slic3r::GCodeProcessorResult gcode_result;
-    std::vector<TriangleMesh>    meshes_backup;
+    ConicalTransform 		    conical_transform;
 
 
     // GUI elements
@@ -3533,36 +3536,30 @@ bool Plater::priv::restart_background_process(unsigned int state)
     return false;
 }
 
-void Plater::priv::apply_conical_transformation() { 
-    std::cout<<"Applying conical transformation"<<std::endl;
+void Plater::priv::apply_conical_transformation() {
+    if (wxGetApp().preset_bundle->full_config().opt_bool("active_conical_slicing")) {
+        std::cout << "Applying conical transformation" << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "Applying conical transformation";
 
-    meshes_backup.clear();
+        if (!conical_transform.is_backup_empty())
+            load_oryginal_meshes();
 
-    auto mesh = this->sidebar->obj_list()->object(0)->mesh();
+        const auto meshes = conical_transform.apply_transform(model, wxGetApp().preset_bundle->full_config());
 
-    meshes_backup.push_back(mesh);
-  
-    indexed_triangle_set copied_mesh;
+        this->sidebar->obj_list()->delete_all_objects_from_list();
+        model.clear_objects();
 
-    copied_mesh.indices  = std::move(mesh.its.indices);
-    copied_mesh.vertices = std::move(mesh.its.vertices);
+        for(auto mesh : meshes)
+            this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
 
-    stl_vertex translation;
-    translation << 5, -5, 5;
-
-    copied_mesh.vertices[0] += translation;
-
-    this->sidebar->obj_list()->delete_all_objects_from_list();
-
-    model.clear_objects();
-
-    this->sidebar->obj_list()->load_mesh_object(TriangleMesh(copied_mesh), "Transformed Mesh");
-
-    background_process.apply(q->model(), wxGetApp().preset_bundle->full_config());
+        background_process.apply(q->model(), wxGetApp().preset_bundle->full_config());
+    }
 }
 
 void Plater::priv::load_oryginal_meshes()
 {
+    std::cout << "Loading oryginal meshes" << std::endl;
+    auto meshes_backup = conical_transform.get_backup();
     if (meshes_backup.empty())
 		return;
 
@@ -3571,9 +3568,9 @@ void Plater::priv::load_oryginal_meshes()
     model.clear_objects();
 
     for (auto mesh : meshes_backup)
-		this->sidebar->obj_list()->load_mesh_object(mesh, "BackUped Mesh");
+		this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
 
-    meshes_backup.clear();
+    conical_transform.clear_backup();
 }
 
 void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)

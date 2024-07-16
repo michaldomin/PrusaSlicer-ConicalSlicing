@@ -293,6 +293,8 @@ set(SLIC3R_SOURCES
     Arrange/Core/NFP/Kernels/RectangleOverfitKernelWrapper.hpp
     Arrange/Core/NFP/Kernels/SVGDebugOutputKernelWrapper.hpp
     Arrange/Core/NFP/Kernels/KernelUtils.hpp
+    ConicalTransform.cpp
+    ConicalTransform.hpp
     MultiPoint.cpp
     MultiPoint.hpp
     MutablePriorityQueue.hpp
@@ -505,6 +507,7 @@ set(SLIC3R_SOURCES
     Arachne/WallToolPaths.hpp
     Arachne/WallToolPaths.cpp
     StaticMap.hpp
+
 )
 
 add_library(libslic3r STATIC ${SLIC3R_SOURCES})
