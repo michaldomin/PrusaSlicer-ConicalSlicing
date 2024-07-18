@@ -1,5 +1,7 @@
 #include "ConicalTransform.hpp"
 
+#include "CutUtils.hpp"
+
 namespace Slic3r {
 std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, const DynamicPrintConfig &config)
 {
@@ -15,13 +17,36 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
 
     std::vector<ObjectInfo> new_meshes;
 
-    for (const auto &mesh : meshes_backup) {
-        new_meshes.push_back({apply_transformation_on_one_mesh(mesh.mesh), mesh.name});
+    for (const auto &modelObject : model.objects) {
+        auto cut_meshes = cut_first_layer(modelObject);
+        auto transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
+        transformed_mesh.merge(TriangleMesh(cut_meshes.second));
+        new_meshes.push_back({transformed_mesh, modelObject->name});
     }
 
 
     return new_meshes;
 }
+
+const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_first_layer(ModelObject *object)
+{
+    std::cout << "Cutting First Layer" << std::endl;
+    //TODO: replace layer_height with first_layer_height
+    const double first_layer_height = _config.opt_float("layer_height");
+    const double obj_height = object->bounding_box_exact().size().z();
+    Transform3d  cut_matrix         = Geometry::translation_transform(((-obj_height / 2) + first_layer_height) * Vec3d::UnitZ());
+
+    ModelObjectCutAttributes attributes = ModelObjectCutAttribute::KeepUpper | ModelObjectCutAttribute::KeepLower |
+                                          ModelObjectCutAttribute::PlaceOnCutUpper;
+
+    object->translate(0., 0., -object->bounding_box_exact().min.z());
+
+    auto cut = Cut(object, 0, cut_matrix, attributes);
+    auto cut_objects = cut.perform_with_plane();
+
+    return {copy_mesh(cut_objects[0]->mesh()), copy_mesh(cut_objects[1]->mesh())};
+}
+
 
 TriangleMesh ConicalTransform::apply_transformation_on_one_mesh(TriangleMesh mesh)
 {
@@ -29,6 +54,8 @@ TriangleMesh ConicalTransform::apply_transformation_on_one_mesh(TriangleMesh mes
 
     copied_mesh.indices  = std::move(mesh.its.indices);
     copied_mesh.vertices = std::move(mesh.its.vertices);
+
+    mesh = TriangleMesh(copied_mesh);
 
     const double cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
 
@@ -42,6 +69,7 @@ TriangleMesh ConicalTransform::apply_transformation_on_one_mesh(TriangleMesh mes
         triangles.push_back(triangle);
      }
 
+     //triangles = cut_first_layer(triangles);
      triangles = refinement_triangulation(triangles);
 
      std::vector<Vec3d> points, points_transformed;
