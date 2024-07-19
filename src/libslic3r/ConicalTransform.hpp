@@ -74,6 +74,13 @@ private:
         double t = (height - p1.z()) / (p2.z() - p1.z());
         return p1 + t * (p2 - p1);
     }
+
+    void create_cone(Eigen::MatrixXd &V, Eigen::MatrixXi &F, double radius, double height, int slices) const;
+
+    indexed_triangle_set cut_cone_from_mesh(const indexed_triangle_set &mesh,
+                                                              double                      cone_radius,
+                                                              double                      cone_height,
+                                                              int                         cone_slices) const;
 };
 };
 

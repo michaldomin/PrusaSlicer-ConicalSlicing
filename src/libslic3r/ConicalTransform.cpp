@@ -2,6 +2,8 @@
 
 #include "CutUtils.hpp"
 
+#include <igl/copyleft/cgal/mesh_boolean.h>
+
 namespace Slic3r {
 std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, const DynamicPrintConfig &config)
 {
@@ -26,9 +28,61 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
         }
         new_meshes.push_back({transformed_mesh, modelObject->name});
     }
-
-
     return new_meshes;
+}
+
+void ConicalTransform::create_cone(Eigen::MatrixXd &V, Eigen::MatrixXi &F, double radius, double height, int slices) const
+{
+    V.resize(slices + 2, 3);
+    F.resize(slices * 2, 3);
+
+    V.row(0) << 0, 0, height;
+    for (int i = 0; i < slices; ++i) {
+        double angle = 2 * M_PI * i / slices;
+        double x     = radius * cos(angle);
+        double y     = radius * sin(angle);
+        V.row(i + 1) << x, y, 0;
+    }
+    V.row(slices + 1) << 0, 0, 0;
+
+    for (int i = 0; i < slices; ++i) {
+        F.row(i) << 0, i + 1, (i + 1) % slices + 1;
+        F.row(i + slices) << slices + 1, (i + 1) % slices + 1, i + 1;
+    }
+}
+
+indexed_triangle_set ConicalTransform::cut_cone_from_mesh(const indexed_triangle_set &mesh,
+                                                          double                      cone_radius,
+                                                          double                      cone_height,
+                                                          int                         cone_slices) const
+{
+    Eigen::MatrixXd V1(mesh.vertices.size(), 3);
+    Eigen::MatrixXi F1(mesh.indices.size(), 3);
+    for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+        V1.row(i) = mesh.vertices[i].cast<double>();
+    }
+    for (size_t i = 0; i < mesh.indices.size(); ++i) {
+        F1.row(i) = mesh.indices[i].cast<int>();
+    }
+
+    // Create the cone
+    Eigen::MatrixXd V2;
+    Eigen::MatrixXi F2;
+    create_cone(V2, F2, cone_radius, cone_height, cone_slices);
+
+    Eigen::MatrixXd V_res;
+    Eigen::MatrixXi F_res;
+    igl::copyleft::cgal::mesh_boolean(V1, F1, V2, F2, igl::MESH_BOOLEAN_TYPE_MINUS, V_res, F_res);
+
+    indexed_triangle_set result;
+    for (int i = 0; i < V_res.rows(); ++i) {
+        result.vertices.push_back(V_res.row(i).cast<float>());
+    }
+    for (int i = 0; i < F_res.rows(); ++i) {
+        result.indices.push_back(F_res.row(i).cast<int>());
+    }
+
+    return result;
 }
 
 const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_first_layer(ModelObject *object)
