@@ -24,6 +24,8 @@ public:
 
     std::vector<ObjectInfo> apply_transform(const Model &model, const DynamicPrintConfig &full_config);
 
+    std::string apply_back_transform(const std::string &gcode_layer, double height) const;
+
     std::vector<ObjectInfo> get_backup() const { return meshes_backup; }
 
     bool is_backup_empty() const { return meshes_backup.empty(); }
@@ -45,6 +47,12 @@ private:
                                                                   std::vector<Vec3d>       &points_transformed,
                                                                   double                    cone_angle_rad,
                                                                   const Vec3d              &center);
+
+    std::string         insert_Z(const std::string &row, double z_value) const;
+    std::string         replace_E(const std::string &row, double dist_old, double dist_new, double corr_value) const;
+    double              compute_angle_radial(double x_old, double y_old, double x_new, double y_new, bool inward_cone) const;
+    std::vector<double> compute_U_values(const std::vector<double> &angle_array) const;
+    std::string         insert_U(const std::string &row, double angle) const;
 
     indexed_triangle_set copy_mesh(const TriangleMesh &mesh)
     {

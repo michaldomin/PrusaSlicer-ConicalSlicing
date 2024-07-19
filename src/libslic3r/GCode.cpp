@@ -2332,13 +2332,12 @@ LayerResult GCodeGenerator::process_layer(
     BOOST_LOG_TRIVIAL(trace) << "Exported layer " << layer.id() << " print_z " << print_z <<
     log_memory_info();
 
-    //gcode += ";aaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    print.conical_transform()->test();
+    if (config().opt_bool("active_conical_slicing")) {
+        result.gcode = print.conical_transform()->apply_back_transform(gcode, print_z);
+    } else {
+        result.gcode = std::move(gcode);
+    }
 
-
-    //std::cout << gcode.length() << std::endl; 
-
-    result.gcode = std::move(gcode);
     result.cooling_buffer_flush = object_layer || raft_layer || last_layer;
     return result;
 }
