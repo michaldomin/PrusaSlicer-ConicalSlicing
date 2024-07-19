@@ -148,6 +148,7 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
 {
     const double cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
     const bool   inward_cone    = _config.opt_bool("inward_cone");
+    const Vec3d  center         = meshes_backup[0].mesh.center();
 
     std::regex pattern_X("X[-0-9]*[.]?[0-9]*");
     std::regex pattern_Y("Y[-0-9]*[.]?[0-9]*");
@@ -191,11 +192,11 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         }
 
         if (x_found) {
-            x_new    = std::stod(x_match.str().substr(1));
+            x_new    = std::stod(x_match.str().substr(1)) - center.x();
             update_x = true;
         }
         if (y_found) {
-            y_new    = std::stod(y_match.str().substr(1));
+            y_new    = std::stod(y_match.str().substr(1)) - center.y();
             update_y = true;
         }
 
@@ -208,8 +209,8 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         int                 num_segm = static_cast<int>(dist_transformed / 0.5) + 1; // Assuming a default segment length of 0.5
         std::vector<double> x_vals(num_segm + 1), y_vals(num_segm + 1), z_vals(num_segm + 1);
         for (int i = 0; i <= num_segm; ++i) {
-            x_vals[i] = x_old_bt + i * (x_new_bt - x_old_bt) / num_segm;
-            y_vals[i] = y_old_bt + i * (y_new_bt - y_old_bt) / num_segm;
+            x_vals[i] = x_old_bt + i * (x_new_bt - x_old_bt) / num_segm + center.x();
+            y_vals[i] = y_old_bt + i * (y_new_bt - y_old_bt) / num_segm + center.y();
         }
 
         if (inward_cone && !e_found && (update_x || update_y)) {
@@ -220,7 +221,10 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
             }
         } else {
             for (int i = 0; i <= num_segm; ++i) {
-                z_vals[i] = z_layer + c * std::sqrt(x_vals[i] * x_vals[i] + y_vals[i] * y_vals[i]) * std::tan(cone_angle_rad);
+                z_vals[i] = z_layer + c *
+                                          std::sqrt((x_vals[i] - center.x()) * (x_vals[i] - center.x()) +
+                                                    (y_vals[i] - center.y()) * (y_vals[i] - center.y())) *
+                                          std::tan(cone_angle_rad);
             }
             if (e_found && (std::max_element(z_vals.begin(), z_vals.end()) != z_vals.end() || z_max == 0)) {
                 z_max = *std::max_element(z_vals.begin(), z_vals.end());
