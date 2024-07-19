@@ -3497,6 +3497,13 @@ void PrintConfigDef::init_fff_params()
     def->mode     = comSimple;
     def->set_default_value(new ConfigOptionInt(0));
 
+    def           = this->add("skip_first_layer", coBool);
+    def->label    = L("Skip First Layer Transformation");
+    def->category = L("Conical");
+    def->tooltip  = L("Skipping First Layer Transformation allows for better adhesion and first layer surface.");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionBool(true));
+
     def           = this->add("refinement_iterations", coInt);
     def->label    = L("Number of refinement_triangulation iterations");
     def->category = L("Conical");

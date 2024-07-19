@@ -15,12 +15,15 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
     std::vector<ObjectInfo> new_meshes;
 
     for (const auto &modelObject : model.objects) {
-        //auto cut_meshes = cut_first_layer(modelObject);
-        //auto transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
-        //transformed_mesh.merge(TriangleMesh(cut_meshes.second));
-        //new_meshes.push_back({transformed_mesh, modelObject->name});
-
-        auto transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh((modelObject->mesh())));
+        TriangleMesh transformed_mesh;
+        if (_config.opt_bool("skip_first_layer")) {
+            auto cut_meshes = cut_first_layer(modelObject);
+            transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
+            transformed_mesh.merge(TriangleMesh(cut_meshes.second));
+        }
+        else {
+            transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh((modelObject->mesh())));
+        }
         new_meshes.push_back({transformed_mesh, modelObject->name});
     }
 
@@ -30,7 +33,6 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
 
 const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_first_layer(ModelObject *object)
 {
-    //std::cout << "Cutting First Layer" << std::endl;
     //TODO: replace layer_height with first_layer_height
     const double first_layer_height = _config.opt_float("layer_height");
     const double obj_height = object->bounding_box_exact().size().z();
@@ -146,6 +148,10 @@ void ConicalTransform::transformation_kegel(const std::vector<Vec3d> &points,
 
 std::string ConicalTransform::apply_back_transform(const std::string &gcode_layer, double height) const
 {
+    // TODO: replace layer_height with first_layer_height
+    if (_config.opt_bool("skip_first_layer") && _config.opt_float("layer_height") + 0.01 > height) {
+        return gcode_layer;
+    }
     const double cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
     const bool   inward_cone    = _config.opt_bool("inward_cone");
     const Vec3d  center         = meshes_backup[0].mesh.center();
