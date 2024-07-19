@@ -5,22 +5,22 @@
 namespace Slic3r {
 std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, const DynamicPrintConfig &config)
 {
-	std::cout << "Applying conical transform-new" << std::endl;
-
     meshes_backup.clear();
     _config = config;
 
 	for (const auto &modelObject : model.objects) {
-        std::cout << modelObject->origin_translation << std::endl;
         meshes_backup.push_back({modelObject->mesh(), modelObject->name});
     }
 
     std::vector<ObjectInfo> new_meshes;
 
     for (const auto &modelObject : model.objects) {
-        auto cut_meshes = cut_first_layer(modelObject);
-        auto transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
-        transformed_mesh.merge(TriangleMesh(cut_meshes.second));
+        //auto cut_meshes = cut_first_layer(modelObject);
+        //auto transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
+        //transformed_mesh.merge(TriangleMesh(cut_meshes.second));
+        //new_meshes.push_back({transformed_mesh, modelObject->name});
+
+        auto transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh((modelObject->mesh())));
         new_meshes.push_back({transformed_mesh, modelObject->name});
     }
 
@@ -30,7 +30,7 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
 
 const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_first_layer(ModelObject *object)
 {
-    std::cout << "Cutting First Layer" << std::endl;
+    //std::cout << "Cutting First Layer" << std::endl;
     //TODO: replace layer_height with first_layer_height
     const double first_layer_height = _config.opt_float("layer_height");
     const double obj_height = object->bounding_box_exact().size().z();
@@ -50,26 +50,20 @@ const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cu
 
 TriangleMesh ConicalTransform::apply_transformation_on_one_mesh(TriangleMesh mesh)
 {
-    indexed_triangle_set copied_mesh;
-
-    copied_mesh.indices  = std::move(mesh.its.indices);
-    copied_mesh.vertices = std::move(mesh.its.vertices);
-
-    mesh = TriangleMesh(copied_mesh);
+    indexed_triangle_set mesh_its = mesh.its;
 
     const double cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
 
      indexed_triangle_set transformed_mesh;
 
      std::vector<std::array<Vec3d, 3>> triangles;
-     for (const auto &index : copied_mesh.indices) {
-        std::array<Vec3d, 3> triangle = {copied_mesh.vertices[index[0]].template cast<double>(),
-                                         copied_mesh.vertices[index[1]].template cast<double>(),
-                                         copied_mesh.vertices[index[2]].template cast<double>()};
+     for (const auto &index : mesh_its.indices) {
+        std::array<Vec3d, 3> triangle = {mesh_its.vertices[index[0]].template cast<double>(),
+                                         mesh_its.vertices[index[1]].template cast<double>(),
+                                         mesh_its.vertices[index[2]].template cast<double>()};
         triangles.push_back(triangle);
      }
 
-     //triangles = cut_first_layer(triangles);
      triangles = refinement_triangulation(triangles);
 
      std::vector<Vec3d> points, points_transformed;

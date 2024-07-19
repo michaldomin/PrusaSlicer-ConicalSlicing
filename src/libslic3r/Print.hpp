@@ -47,6 +47,8 @@
 #include <set>
 #include <tcbspan/span.hpp>
 
+#include "ConicalTransform.hpp"
+
 namespace Slic3r {
 
 class GCodeGenerator;
@@ -665,6 +667,9 @@ public:
     const Polygons& get_sequential_print_clearance_contours() const { return m_sequential_print_clearance_contours; }
     static bool sequential_print_horizontal_clearance_valid(const Print& print, Polygons* polygons = nullptr);
 
+    const ConicalTransform *conical_transform() const { return m_conical_transform; }
+    ConicalTransform *conical_transform() { return m_conical_transform; }
+
 protected:
     // Invalidates the step, and its depending steps in Print.
     bool                invalidate_step(PrintStep step);
@@ -723,6 +728,8 @@ private:
     friend class PrintObject;
 
     ConflictResultOpt m_conflict_result;
+
+    ConicalTransform* m_conical_transform = nullptr;
 };
 
 } /* slic3r_Print_hpp_ */

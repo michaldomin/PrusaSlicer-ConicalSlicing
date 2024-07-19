@@ -20,16 +20,17 @@ enum ConeType{ outward, inward};
 class ConicalTransform
 {
 public:
+    ConicalTransform() = default;
+
     std::vector<ObjectInfo> apply_transform(const Model &model, const DynamicPrintConfig &full_config);
 
-    std::vector<ObjectInfo> get_backup() { return meshes_backup; }
+    std::vector<ObjectInfo> get_backup() const { return meshes_backup; }
 
     bool is_backup_empty() const { return meshes_backup.empty(); }
 
     void clear_backup() { meshes_backup.clear(); }
 
-
-    //void test();
+    void test() const { std::cout << "Meshes size test: " << meshes_backup.size() << std::endl; }
 
 private:
     DynamicPrintConfig _config;
@@ -38,7 +39,6 @@ private:
 
     TriangleMesh                             apply_transformation_on_one_mesh(TriangleMesh mesh);
     const std::pair<indexed_triangle_set, indexed_triangle_set> cut_first_layer(ModelObject *object);
-    //std::vector<std::array<Vec3d, 3>>        cut_first_layer(const std::vector<std::array<Vec3d, 3>> &triangles);
     std::vector<std::array<Vec3d, 3>>        refinement_triangulation(const std::vector<std::array<Vec3d, 3>> &triangles);
     static std::vector<std::array<Vec3d, 3>> refinement_four_triangles(const std::array<Vec3d, 3> &triangle);
     void                                     transformation_kegel(const std::vector<Vec3d> &points,

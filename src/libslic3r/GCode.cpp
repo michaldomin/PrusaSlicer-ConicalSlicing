@@ -2332,6 +2332,12 @@ LayerResult GCodeGenerator::process_layer(
     BOOST_LOG_TRIVIAL(trace) << "Exported layer " << layer.id() << " print_z " << print_z <<
     log_memory_info();
 
+    //gcode += ";aaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    print.conical_transform()->test();
+
+
+    //std::cout << gcode.length() << std::endl; 
+
     result.gcode = std::move(gcode);
     result.cooling_buffer_flush = object_layer || raft_layer || last_layer;
     return result;

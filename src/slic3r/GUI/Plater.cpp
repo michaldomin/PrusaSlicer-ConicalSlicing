@@ -143,9 +143,6 @@
 
 #include "Widgets/CheckBox.hpp"
 
-#include "libslic3r/ConicalTransform.hpp"
-
-
 using boost::optional;
 namespace fs = boost::filesystem;
 using Slic3r::_3DScene;
@@ -1747,8 +1744,6 @@ struct Plater::priv
     Slic3r::Model               model;
     PrinterTechnology           printer_technology = ptFFF;
     Slic3r::GCodeProcessorResult gcode_result;
-    ConicalTransform 		    conical_transform;
-
 
     // GUI elements
     wxSizer* panel_sizer{ nullptr };
@@ -3541,10 +3536,10 @@ void Plater::priv::apply_conical_transformation() {
         std::cout << "Applying conical transformation" << std::endl;
         BOOST_LOG_TRIVIAL(info) << "Applying conical transformation";
 
-        if (!conical_transform.is_backup_empty())
+        if (!fff_print.conical_transform()->is_backup_empty())
             load_oryginal_meshes();
 
-        const auto meshes = conical_transform.apply_transform(model, wxGetApp().preset_bundle->full_config());
+        const auto meshes = fff_print.conical_transform()->apply_transform(model, wxGetApp().preset_bundle->full_config());
 
         this->sidebar->obj_list()->delete_all_objects_from_list();
         model.clear_objects();
@@ -3559,7 +3554,7 @@ void Plater::priv::apply_conical_transformation() {
 void Plater::priv::load_oryginal_meshes()
 {
     std::cout << "Loading oryginal meshes" << std::endl;
-    auto meshes_backup = conical_transform.get_backup();
+    auto meshes_backup = fff_print.conical_transform()->get_backup();
     if (meshes_backup.empty())
 		return;
 
@@ -3570,7 +3565,7 @@ void Plater::priv::load_oryginal_meshes()
     for (auto mesh : meshes_backup)
 		this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
 
-    conical_transform.clear_backup();
+    fff_print.conical_transform()->clear_backup();
 }
 
 void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)
