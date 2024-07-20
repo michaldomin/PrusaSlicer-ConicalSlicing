@@ -1430,6 +1430,9 @@ void GCodeGenerator::_do_export(Print& print, GCodeOutputStream &file, Thumbnail
             file.write("; prusaslicer_config = end\n");
         }
     }
+
+    print.conical_transform()->resetSavedPosition();
+
     print.throw_if_canceled();
 }
 

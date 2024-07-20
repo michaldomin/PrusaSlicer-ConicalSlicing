@@ -6,6 +6,8 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Model.hpp"
 #include <cmath>
+#include <regex>
+#include "CutUtils.hpp"
 
 namespace Slic3r {
 
@@ -20,7 +22,15 @@ enum ConeType{ outward, inward};
 class ConicalTransform
 {
 public:
-    ConicalTransform() = default;
+    ConicalTransform()
+    {
+        _pattern_X = "X[-0-9]*[.]?[0-9]*";
+        _pattern_Y = "Y[-0-9]*[.]?[0-9]*";
+        _pattern_Z = "Z[-0-9]*[.]?[0-9]*";
+        _pattern_E = "E[-0-9]*[.]?[0-9]*";
+        _pattern_U = "U[-0-9]*[.]?[0-9]*";
+        _pattern_G = "^G[1] ";
+    };
 
     std::vector<ObjectInfo> apply_transform(const Model &model, const DynamicPrintConfig &full_config);
 
@@ -32,7 +42,11 @@ public:
 
     void clear_backup() { meshes_backup.clear(); }
 
-    void test() const { std::cout << "Meshes size test: " << meshes_backup.size() << std::endl; }
+    void resetSavedPosition() const
+    {
+        _x_old = _center_x;
+        _y_old = _center_y;
+    }
 
 private:
     DynamicPrintConfig _config;
@@ -41,6 +55,15 @@ private:
     double                  _center_x;
     double                  _center_y;
     double                  _planar_height;
+    mutable double          _x_old;
+    mutable double          _y_old;
+
+    std::regex _pattern_X;
+    std::regex _pattern_Y;
+    std::regex _pattern_Z;
+    std::regex _pattern_E;
+    std::regex _pattern_U;
+    std::regex _pattern_G;
 
 
     TriangleMesh                             apply_transformation_on_one_mesh(TriangleMesh mesh);
@@ -68,12 +91,6 @@ private:
         copied_mesh.vertices = mesh.vertices;
 
         return copied_mesh;
-    }
-
-    Vec3d interpolate(const Vec3d &p1, const Vec3d &p2, double height)
-    {
-        double t = (height - p1.z()) / (p2.z() - p1.z());
-        return p1 + t * (p2 - p1);
     }
 };
 };

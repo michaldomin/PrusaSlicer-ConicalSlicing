@@ -1,7 +1,5 @@
 #include "ConicalTransform.hpp"
 
-#include "CutUtils.hpp"
-
 namespace Slic3r {
 std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, const DynamicPrintConfig &config)
 {
@@ -22,6 +20,8 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
         _center_x = meshes_backup[0].mesh.center().x();
         _center_y = meshes_backup[0].mesh.center().y();
     }
+    _x_old = _center_x;
+    _y_old = _center_y;
 
     std::vector<ObjectInfo> new_meshes;
 
@@ -158,18 +158,33 @@ void ConicalTransform::transformation_kegel(const std::vector<Vec3d> &points,
 std::string ConicalTransform::apply_back_transform(const std::string &gcode_layer, double height) const
 {
     if (_config.opt_float("planar_height") + 0.01 > height) {
+        std::smatch g_match;
+        std::string last_match;
+
+        auto start = gcode_layer.cbegin();
+        auto end   = gcode_layer.cend();
+
+        while (std::regex_search(start, end, g_match, _pattern_G)) {
+            last_match = g_match.str();
+            start      = g_match.suffix().first;
+        }
+
+        std::smatch x_match, y_match;
+        bool x_found = std::regex_search(last_match, x_match, _pattern_X);
+        bool y_found = std::regex_search(last_match, y_match, _pattern_Y);
+
+        if (x_found) {
+            _x_old    = std::stod(x_match.str().substr(1)) - _center_x;
+        }
+        if (y_found) {
+            _y_old    = std::stod(y_match.str().substr(1)) - _center_y;
+        }
+
         return gcode_layer;
     }
 
     const bool   inward_cone    = _config.opt_bool("inward_cone");
 
-    std::regex pattern_X("X[-0-9]*[.]?[0-9]*");
-    std::regex pattern_Y("Y[-0-9]*[.]?[0-9]*");
-    std::regex pattern_Z("Z[-0-9]*[.]?[0-9]*");
-    std::regex pattern_E("E[-0-9]*[.]?[0-9]*");
-    std::regex pattern_G("^G[1] ");
-
-    double x_old = 0, y_old = 0;
     double x_new = 0, y_new = 0;
     double z_layer  = height;
     double z_max    = 0;
@@ -182,7 +197,7 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
 
     while (std::getline(gcode_stream, row)) {
         std::smatch g_match;
-        if (!std::regex_search(row, g_match, pattern_G)) {
+        if (!std::regex_search(row, g_match, _pattern_G)) {
             new_data.push_back(row);
             continue;
         }
@@ -195,9 +210,9 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         }
 
         std::smatch x_match, y_match, z_match;
-        bool        x_found = std::regex_search(row, x_match, pattern_X);
-        bool        y_found = std::regex_search(row, y_match, pattern_Y);
-        bool        z_found = std::regex_search(row, z_match, pattern_Z);
+        bool        x_found = std::regex_search(row, x_match, _pattern_X);
+        bool        y_found = std::regex_search(row, y_match, _pattern_Y);
+        bool        z_found = std::regex_search(row, z_match, _pattern_Z);
 
         if (!x_found && !y_found && !z_found) {
             new_data.push_back(row + comment);
@@ -214,12 +229,12 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         }
 
         std::smatch e_match;
-        bool        e_found  = std::regex_search(row, e_match, pattern_E);
-        double      x_old_bt = x_old * std::cos(_cone_angle_rad), x_new_bt = x_new * std::cos(_cone_angle_rad);
-        double      y_old_bt = y_old * std::cos(_cone_angle_rad), y_new_bt = y_new * std::cos(_cone_angle_rad);
-        double      dist_transformed = std::sqrt(std::pow(x_new - x_old, 2) + std::pow(y_new - y_old, 2));
+        bool        e_found  = std::regex_search(row, e_match, _pattern_E);
+        double      x_old_bt = _x_old * std::cos(_cone_angle_rad), x_new_bt = x_new * std::cos(_cone_angle_rad);
+        double      y_old_bt = _y_old * std::cos(_cone_angle_rad), y_new_bt = y_new * std::cos(_cone_angle_rad);
+        double      dist_transformed = std::sqrt(std::pow(x_new - _x_old, 2) + std::pow(y_new - _y_old, 2));
 
-        int                 num_segm = static_cast<int>(dist_transformed / 0.5) + 1; // Assuming a default segment length of 0.5
+        int                 num_segm = static_cast<int>(dist_transformed / 0.5) + 1;
         std::vector<double> x_vals(num_segm + 1), y_vals(num_segm + 1), z_vals(num_segm + 1);
         for (int i = 0; i <= num_segm; ++i) {
             x_vals[i] = x_old_bt + i * (x_new_bt - x_old_bt) / num_segm + _center_x;
@@ -261,20 +276,20 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
 
         std::string replacement_rows;
         for (int j = 0; j < num_segm; ++j) {
-            std::string single_row = std::regex_replace(row_new, pattern_X, "X" + std::to_string(round(x_vals[j + 1] * 1000.0) / 1000.0));
-            single_row = std::regex_replace(single_row, pattern_Y, "Y" + std::to_string(round(y_vals[j + 1] * 1000.0) / 1000.0));
-            single_row = std::regex_replace(single_row, pattern_Z,
+            std::string single_row = std::regex_replace(row_new, _pattern_X, "X" + std::to_string(round(x_vals[j + 1] * 1000.0) / 1000.0));
+            single_row = std::regex_replace(single_row, _pattern_Y, "Y" + std::to_string(round(y_vals[j + 1] * 1000.0) / 1000.0));
+            single_row = std::regex_replace(single_row, _pattern_Z,
                                             "Z" + std::to_string(z_vals[j + 1] < _planar_height ? z_layer : round(z_vals[j + 1] * 1000.0) / 1000.0));
             single_row = replace_E(single_row, distances_transformed[j], distances_bt[j], 1);
             replacement_rows += single_row + "\n";
         }
 
         if (update_x) {
-            x_old    = x_new;
+            _x_old    = x_new;
             update_x = false;
         }
         if (update_y) {
-            y_old    = y_new;
+            _y_old    = y_new;
             update_y = false;
         }
 
@@ -291,17 +306,14 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
 
 std::string ConicalTransform::insert_Z(const std::string &row, double z_value) const
 {
-    std::regex  pattern_X("X[-0-9]*[.]?[0-9]*");
-    std::regex  pattern_Y("Y[-0-9]*[.]?[0-9]*");
-    std::regex  pattern_Z("Z[-0-9]*[.]?[0-9]*");
     std::smatch match_x, match_y, match_z;
 
     std::string row_new = row;
-    if (std::regex_search(row, match_z, pattern_Z)) {
-        row_new = std::regex_replace(row, pattern_Z, " Z" + std::to_string(round(z_value * 1000.0) / 1000.0));
-    } else if (std::regex_search(row, match_y, pattern_Y)) {
+    if (std::regex_search(row, match_z, _pattern_Z)) {
+        row_new = std::regex_replace(row, _pattern_Z, " Z" + std::to_string(round(z_value * 1000.0) / 1000.0));
+    } else if (std::regex_search(row, match_y, _pattern_Y)) {
         row_new.insert(match_y.position() + match_y.length(), " Z" + std::to_string(round(z_value * 1000.0) / 1000.0));
-    } else if (std::regex_search(row, match_x, pattern_X)) {
+    } else if (std::regex_search(row, match_x, _pattern_X)) {
         row_new.insert(match_x.position() + match_x.length(), " Z" + std::to_string(round(z_value * 1000.0) / 1000.0));
     } else {
         row_new = "Z" + std::to_string(round(z_value * 1000.0) / 1000.0) + " " + row;
@@ -311,10 +323,9 @@ std::string ConicalTransform::insert_Z(const std::string &row, double z_value) c
 
 std::string ConicalTransform::replace_E(const std::string &row, double dist_old, double dist_new, double corr_value) const
 {
-    std::regex  pattern_E("E[-0-9]*[.]?[0-9]*");
     std::smatch match_e;
     std::string row_new = row;
-    if (std::regex_search(row, match_e, pattern_E)) {
+    if (std::regex_search(row, match_e, _pattern_E)) {
         double             e_val_old = std::stod(match_e.str().substr(1));
         double             e_val_new = (dist_old == 0) ? 0 : e_val_old * dist_new * corr_value / dist_old;
         std::ostringstream oss;
@@ -367,14 +378,12 @@ std::vector<double> ConicalTransform::compute_U_values(const std::vector<double>
 
 std::string ConicalTransform::insert_U(const std::string &row, double angle) const
 {
-    std::regex  pattern_Z("Z[-0-9]*[.]?[0-9]*");
-    std::regex  pattern_U("U[-0-9]*[.]?[0-9]*");
     std::smatch match_z, match_u;
 
     std::string row_new = row;
-    if (std::regex_search(row, match_u, pattern_U)) {
-        row_new = std::regex_replace(row, pattern_U, "U" + std::to_string(angle));
-    } else if (std::regex_search(row, match_z, pattern_Z)) {
+    if (std::regex_search(row, match_u, _pattern_U)) {
+        row_new = std::regex_replace(row, _pattern_U, "U" + std::to_string(angle));
+    } else if (std::regex_search(row, match_z, _pattern_Z)) {
         row_new.insert(match_z.position() + match_z.length(), " U" + std::to_string(angle));
     }
 
