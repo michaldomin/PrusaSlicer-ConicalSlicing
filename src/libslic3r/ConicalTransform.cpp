@@ -12,12 +12,23 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
         meshes_backup.push_back({modelObject->mesh(), modelObject->name});
     }
 
+    _cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
+    _planar_height = _config.opt_float("planar_height");
+
+    if (_config.opt_bool("use_own_transformation_center")) {
+        _center_x = _config.opt_float("transformation_center_x");
+        _center_y = _config.opt_float("transformation_center_y");
+    } else {
+        _center_x = meshes_backup[0].mesh.center().x();
+        _center_y = meshes_backup[0].mesh.center().y();
+    }
+
     std::vector<ObjectInfo> new_meshes;
 
     for (const auto &modelObject : model.objects) {
         TriangleMesh transformed_mesh;
-        if (_config.opt_bool("skip_first_layer")) {
-            auto cut_meshes = cut_first_layer(modelObject);
+        if (_planar_height > 0.001) {
+            auto cut_meshes = cut_planar_bottom(modelObject);
             transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
             transformed_mesh.merge(TriangleMesh(cut_meshes.second));
         }
@@ -31,12 +42,10 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
     return new_meshes;
 }
 
-const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_first_layer(ModelObject *object)
+const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_planar_bottom(ModelObject *object)
 {
-    //TODO: replace layer_height with first_layer_height
-    const double first_layer_height = _config.opt_float("layer_height");
     const double obj_height = object->bounding_box_exact().size().z();
-    Transform3d  cut_matrix         = Geometry::translation_transform(((-obj_height / 2) + first_layer_height) * Vec3d::UnitZ());
+    Transform3d  cut_matrix         = Geometry::translation_transform(((-obj_height / 2) + _planar_height) * Vec3d::UnitZ());
 
     ModelObjectCutAttributes attributes = ModelObjectCutAttribute::KeepUpper | ModelObjectCutAttribute::KeepLower |
                                           ModelObjectCutAttribute::PlaceOnCutUpper;
@@ -75,7 +84,7 @@ TriangleMesh ConicalTransform::apply_transformation_on_one_mesh(TriangleMesh mes
         points.push_back(triangle[2]);
      }
 
-     transformation_kegel(points, points_transformed, cone_angle_rad, mesh.center());
+     transformation_kegel(points, points_transformed, _center_x, _center_y);
 
      size_t index = 0;
      for (const auto &point : points_transformed) {
@@ -124,22 +133,22 @@ std::vector<std::array<Vec3d, 3>> ConicalTransform::refinement_four_triangles(co
 
 void ConicalTransform::transformation_kegel(const std::vector<Vec3d> &points,
                           std::vector<Vec3d>       &points_transformed,
-                          double                    cone_angle_rad,
-                          const Vec3d              &center)
+                          double                   center_x,
+                          double                   center_y)
 {
     const int c = _config.opt_bool("inward_cone") ? -1 : 1;
 
     for (const auto &point : points) {
-        double x = point[0] - center[0];
-        double y = point[1] - center[1];
-        double z = point[2] - center[2];
+        double x = point[0] - center_x;
+        double y = point[1] - center_y;
+        double z = point[2] - _planar_height;
 
-        Vec3d transformed_point(x / std::cos(cone_angle_rad), y / std::cos(cone_angle_rad),
-                                z + c * std::sqrt(x * x + y * y) * std::tan(cone_angle_rad));
+        Vec3d transformed_point(x / std::cos(_cone_angle_rad), y / std::cos(_cone_angle_rad),
+                                z + c * std::sqrt(x * x + y * y) * std::tan(_cone_angle_rad));
 
-        transformed_point[0] += center[0];
-        transformed_point[1] += center[1];
-        transformed_point[2] += center[2];
+        transformed_point[0] += center_x;
+        transformed_point[1] += center_y;
+        transformed_point[2] += _planar_height;
 
         points_transformed.push_back(transformed_point);
     }
@@ -148,13 +157,11 @@ void ConicalTransform::transformation_kegel(const std::vector<Vec3d> &points,
 
 std::string ConicalTransform::apply_back_transform(const std::string &gcode_layer, double height) const
 {
-    // TODO: replace layer_height with first_layer_height
-    if (_config.opt_bool("skip_first_layer") && _config.opt_float("layer_height") + 0.01 > height) {
+    if (_config.opt_float("planar_height") + 0.01 > height) {
         return gcode_layer;
     }
-    const double cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
+
     const bool   inward_cone    = _config.opt_bool("inward_cone");
-    const Vec3d  center         = meshes_backup[0].mesh.center();
 
     std::regex pattern_X("X[-0-9]*[.]?[0-9]*");
     std::regex pattern_Y("Y[-0-9]*[.]?[0-9]*");
@@ -198,39 +205,39 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         }
 
         if (x_found) {
-            x_new    = std::stod(x_match.str().substr(1)) - center.x();
+            x_new    = std::stod(x_match.str().substr(1)) - _center_x;
             update_x = true;
         }
         if (y_found) {
-            y_new    = std::stod(y_match.str().substr(1)) - center.y();
+            y_new    = std::stod(y_match.str().substr(1)) - _center_y;
             update_y = true;
         }
 
         std::smatch e_match;
         bool        e_found  = std::regex_search(row, e_match, pattern_E);
-        double      x_old_bt = x_old * std::cos(cone_angle_rad), x_new_bt = x_new * std::cos(cone_angle_rad);
-        double      y_old_bt = y_old * std::cos(cone_angle_rad), y_new_bt = y_new * std::cos(cone_angle_rad);
+        double      x_old_bt = x_old * std::cos(_cone_angle_rad), x_new_bt = x_new * std::cos(_cone_angle_rad);
+        double      y_old_bt = y_old * std::cos(_cone_angle_rad), y_new_bt = y_new * std::cos(_cone_angle_rad);
         double      dist_transformed = std::sqrt(std::pow(x_new - x_old, 2) + std::pow(y_new - y_old, 2));
 
         int                 num_segm = static_cast<int>(dist_transformed / 0.5) + 1; // Assuming a default segment length of 0.5
         std::vector<double> x_vals(num_segm + 1), y_vals(num_segm + 1), z_vals(num_segm + 1);
         for (int i = 0; i <= num_segm; ++i) {
-            x_vals[i] = x_old_bt + i * (x_new_bt - x_old_bt) / num_segm + center.x();
-            y_vals[i] = y_old_bt + i * (y_new_bt - y_old_bt) / num_segm + center.y();
+            x_vals[i] = x_old_bt + i * (x_new_bt - x_old_bt) / num_segm + _center_x;
+            y_vals[i] = y_old_bt + i * (y_new_bt - y_old_bt) / num_segm + _center_y;
         }
 
         if (inward_cone && !e_found && (update_x || update_y)) {
-            double z_start = z_layer + c * std::sqrt(x_old_bt * x_old_bt + y_old_bt * y_old_bt) * std::tan(cone_angle_rad);
-            double z_end   = z_layer + c * std::sqrt(x_new_bt * x_new_bt + y_new_bt * y_new_bt) * std::tan(cone_angle_rad);
+            double z_start = z_layer + c * std::sqrt(x_old_bt * x_old_bt + y_old_bt * y_old_bt) * std::tan(_cone_angle_rad);
+            double z_end   = z_layer + c * std::sqrt(x_new_bt * x_new_bt + y_new_bt * y_new_bt) * std::tan(_cone_angle_rad);
             for (int i = 0; i <= num_segm; ++i) {
                 z_vals[i] = z_start + i * (z_end - z_start) / num_segm;
             }
         } else {
             for (int i = 0; i <= num_segm; ++i) {
                 z_vals[i] = z_layer + c *
-                                          std::sqrt((x_vals[i] - center.x()) * (x_vals[i] - center.x()) +
-                                                    (y_vals[i] - center.y()) * (y_vals[i] - center.y())) *
-                                          std::tan(cone_angle_rad);
+                                          std::sqrt((x_vals[i] - _center_x) * (x_vals[i] - _center_x) +
+                                                    (y_vals[i] - _center_y) * (y_vals[i] - _center_y)) *
+                                          std::tan(_cone_angle_rad);
             }
             if (e_found && (std::max_element(z_vals.begin(), z_vals.end()) != z_vals.end() || z_max == 0)) {
                 z_max = *std::max_element(z_vals.begin(), z_vals.end());
@@ -250,14 +257,14 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         }
 
         std::string row_new = insert_Z(row, z_vals[0]);
-        row_new             = replace_E(row_new, num_segm, 1, std::cos(cone_angle_rad));
+        row_new             = replace_E(row_new, num_segm, 1, std::cos(_cone_angle_rad));
 
         std::string replacement_rows;
         for (int j = 0; j < num_segm; ++j) {
             std::string single_row = std::regex_replace(row_new, pattern_X, "X" + std::to_string(round(x_vals[j + 1] * 1000.0) / 1000.0));
             single_row = std::regex_replace(single_row, pattern_Y, "Y" + std::to_string(round(y_vals[j + 1] * 1000.0) / 1000.0));
             single_row = std::regex_replace(single_row, pattern_Z,
-                                            "Z" + std::to_string(z_vals[j + 1] < 0 ? z_layer : round(z_vals[j + 1] * 1000.0) / 1000.0));
+                                            "Z" + std::to_string(z_vals[j + 1] < _planar_height ? z_layer : round(z_vals[j + 1] * 1000.0) / 1000.0));
             single_row = replace_E(single_row, distances_transformed[j], distances_bt[j], 1);
             replacement_rows += single_row + "\n";
         }

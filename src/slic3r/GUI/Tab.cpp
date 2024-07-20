@@ -1789,8 +1789,12 @@ void TabPrint::build()
         optgroup = page->new_optgroup(L("Conical Slicing"));
         optgroup->append_single_option_line("active_conical_slicing");
         optgroup->append_single_option_line("non_planar_angle");
-        optgroup->append_single_option_line("skip_first_layer");
+        optgroup->append_single_option_line("planar_height");
         optgroup->append_single_option_line("refinement_iterations");
+        optgroup->append_single_option_line("use_own_transformation_center");
+        optgroup->append_single_option_line("transformation_center_x");
+        optgroup->append_single_option_line("transformation_center_y");
+        optgroup->append_single_option_line("auto_object_fix");
         optgroup->append_single_option_line("inward_cone");
         optgroup->append_single_option_line("non_planar_max_height");
 }

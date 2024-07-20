@@ -37,16 +37,17 @@ public:
 private:
     DynamicPrintConfig _config;
     std::vector<ObjectInfo> meshes_backup;
+    double _cone_angle_rad;
+    double                  _center_x;
+    double                  _center_y;
+    double                  _planar_height;
 
 
     TriangleMesh                             apply_transformation_on_one_mesh(TriangleMesh mesh);
-    const std::pair<indexed_triangle_set, indexed_triangle_set> cut_first_layer(ModelObject *object);
+    const std::pair<indexed_triangle_set, indexed_triangle_set> cut_planar_bottom(ModelObject *object);
     std::vector<std::array<Vec3d, 3>>        refinement_triangulation(const std::vector<std::array<Vec3d, 3>> &triangles);
     static std::vector<std::array<Vec3d, 3>> refinement_four_triangles(const std::array<Vec3d, 3> &triangle);
-    void                                     transformation_kegel(const std::vector<Vec3d> &points,
-                                                                  std::vector<Vec3d>       &points_transformed,
-                                                                  double                    cone_angle_rad,
-                                                                  const Vec3d              &center);
+    void transformation_kegel(const std::vector<Vec3d> &points, std::vector<Vec3d> &points_transformed, double center_x, double center_y);
 
     std::string         insert_Z(const std::string &row, double z_value) const;
     std::string         replace_E(const std::string &row, double dist_old, double dist_new, double corr_value) const;

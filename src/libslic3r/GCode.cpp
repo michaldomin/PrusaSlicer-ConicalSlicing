@@ -2338,6 +2338,7 @@ LayerResult GCodeGenerator::process_layer(
         result.gcode = std::move(gcode);
     }
 
+    //result.gcode                = std::move(gcode);
     result.cooling_buffer_flush = object_layer || raft_layer || last_layer;
     return result;
 }

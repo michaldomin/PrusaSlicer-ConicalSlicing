@@ -558,8 +558,12 @@ PRINT_CONFIG_CLASS_DEFINE(
     //Conical slicing options
     ((ConfigOptionBool,                active_conical_slicing))
     ((ConfigOptionInt,                 non_planar_angle))
-    ((ConfigOptionBool,                skip_first_layer))
+    ((ConfigOptionFloat,               planar_height))
     ((ConfigOptionInt,                 refinement_iterations))
+    ((ConfigOptionBool,                use_own_transformation_center))
+    ((ConfigOptionFloat,               transformation_center_x))
+    ((ConfigOptionFloat,               transformation_center_y))
+    ((ConfigOptionBool,                auto_object_fix))
     ((ConfigOptionBool,                inward_cone))
     ((ConfigOptionFloat,               non_planar_max_height))
 
