@@ -256,7 +256,8 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         for (int j = 0; j < num_segm; ++j) {
             std::string single_row = std::regex_replace(row_new, pattern_X, "X" + std::to_string(round(x_vals[j + 1] * 1000.0) / 1000.0));
             single_row = std::regex_replace(single_row, pattern_Y, "Y" + std::to_string(round(y_vals[j + 1] * 1000.0) / 1000.0));
-            single_row = std::regex_replace(single_row, pattern_Z, "Z" + std::to_string(round(z_vals[j + 1] * 1000.0) / 1000.0));
+            single_row = std::regex_replace(single_row, pattern_Z,
+                                            "Z" + std::to_string(z_vals[j + 1] < 0 ? z_layer : round(z_vals[j + 1] * 1000.0) / 1000.0));
             single_row = replace_E(single_row, distances_transformed[j], distances_bt[j], 1);
             replacement_rows += single_row + "\n";
         }
