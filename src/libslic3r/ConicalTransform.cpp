@@ -6,12 +6,12 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
     meshes_backup.clear();
     _config = config;
 
-	for (const auto &modelObject : model.objects) {
+    for (const auto &modelObject : model.objects) {
         meshes_backup.push_back({modelObject->mesh(), modelObject->name});
     }
 
     _cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
-    _planar_height = _config.opt_float("planar_height");
+    _planar_height  = _config.opt_float("planar_height");
 
     if (_config.opt_bool("use_own_transformation_center")) {
         _center_x = _config.opt_float("transformation_center_x");
@@ -20,24 +20,21 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
         _center_x = meshes_backup[0].mesh.center().x();
         _center_y = meshes_backup[0].mesh.center().y();
     }
-    _x_old = _center_x;
-    _y_old = _center_y;
+    reset_saved_values();
 
     std::vector<ObjectInfo> new_meshes;
 
     for (const auto &modelObject : model.objects) {
         TriangleMesh transformed_mesh;
         if (_planar_height > 0.001) {
-            auto cut_meshes = cut_planar_bottom(modelObject);
+            auto cut_meshes  = cut_planar_bottom(modelObject);
             transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh(cut_meshes.first));
             transformed_mesh.merge(TriangleMesh(cut_meshes.second));
-        }
-        else {
+        } else {
             transformed_mesh = apply_transformation_on_one_mesh(TriangleMesh((modelObject->mesh())));
         }
         new_meshes.push_back({transformed_mesh, modelObject->name});
     }
-
 
     return new_meshes;
 }
@@ -45,115 +42,100 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
 const std::pair<indexed_triangle_set, indexed_triangle_set> ConicalTransform::cut_planar_bottom(ModelObject *object)
 {
     const double obj_height = object->bounding_box_exact().size().z();
-    Transform3d  cut_matrix         = Geometry::translation_transform(((-obj_height / 2) + _planar_height) * Vec3d::UnitZ());
+    Transform3d  cut_matrix = Geometry::translation_transform(((-obj_height / 2) + _planar_height) * Vec3d::UnitZ());
 
     ModelObjectCutAttributes attributes = ModelObjectCutAttribute::KeepUpper | ModelObjectCutAttribute::KeepLower |
                                           ModelObjectCutAttribute::PlaceOnCutUpper;
 
     object->translate(0., 0., -object->bounding_box_exact().min.z());
 
-    auto cut = Cut(object, 0, cut_matrix, attributes);
+    auto cut         = Cut(object, 0, cut_matrix, attributes);
     auto cut_objects = cut.perform_with_plane();
 
     return {copy_mesh(cut_objects[0]->mesh()), copy_mesh(cut_objects[1]->mesh())};
 }
 
-
 TriangleMesh ConicalTransform::apply_transformation_on_one_mesh(TriangleMesh mesh)
 {
     indexed_triangle_set mesh_its = mesh.its;
 
-    const double cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
+    auto refined_mesh = refinement_triangulation(mesh_its, _config.opt_int("refinement_iterations"));
+    transformation_kegel(refined_mesh, _center_x, _center_y);
 
-     indexed_triangle_set transformed_mesh;
-
-     std::vector<std::array<Vec3d, 3>> triangles;
-     for (const auto &index : mesh_its.indices) {
-        std::array<Vec3d, 3> triangle = {mesh_its.vertices[index[0]].template cast<double>(),
-                                         mesh_its.vertices[index[1]].template cast<double>(),
-                                         mesh_its.vertices[index[2]].template cast<double>()};
-        triangles.push_back(triangle);
-     }
-
-     triangles = refinement_triangulation(triangles);
-
-     std::vector<Vec3d> points, points_transformed;
-     for (const auto &triangle : triangles) {
-        points.push_back(triangle[0]);
-        points.push_back(triangle[1]);
-        points.push_back(triangle[2]);
-     }
-
-     transformation_kegel(points, points_transformed, _center_x, _center_y);
-
-     size_t index = 0;
-     for (const auto &point : points_transformed) {
-        transformed_mesh.vertices.push_back(stl_vertex(point[0], point[1], point[2]));
-        if ((index + 1) % 3 == 0) {
-            stl_triangle_vertex_indices indices(index - 2, index - 1, index);
-            transformed_mesh.indices.push_back(indices);
-        }
-        ++index;
-     }
-
-
-    return TriangleMesh(transformed_mesh);
+    return TriangleMesh(refined_mesh);
 }
 
-std::vector<std::array<Vec3d, 3>> ConicalTransform::refinement_triangulation(const std::vector<std::array<Vec3d, 3>> &triangles)
+indexed_triangle_set ConicalTransform::refinement_triangulation(indexed_triangle_set &mesh, int iterations) const
 {
-    std::vector<std::array<Vec3d, 3>> refined_array = triangles;
-
-    for (int i = 0; i < _config.opt_int("refinement_iterations"); ++i) {
-        std::vector<std::array<Vec3d, 3>> temp_array;
-        for (const auto &triangle : refined_array) {
-            auto refined_triangles = refinement_four_triangles(triangle);
-            temp_array.insert(temp_array.end(), refined_triangles.begin(), refined_triangles.end());
-        }
-        refined_array = temp_array;
+    if (iterations <= 0) {
+        return copy_mesh(mesh);
     }
 
-    return refined_array;
-}
+    std::unordered_map<int, std::unordered_map<int, int>> created_points_info;
+    std::vector<stl_vertex>                               vertices = std::move(mesh.vertices);
 
-std::vector<std::array<Vec3d, 3>> ConicalTransform::refinement_four_triangles(const std::array<Vec3d, 3> &triangle)
+    std::vector<stl_triangle_vertex_indices> indices;
+
+    for (const auto &index : mesh.indices) {
+        int index_a = index[0];
+        int index_b = index[1];
+        int index_c = index[2];
+
+        int index_ab = refinement_triangulation_get_middle_point(created_points_info, vertices, index_a, index_b);
+        int index_bc = refinement_triangulation_get_middle_point(created_points_info, vertices, index_b, index_c);
+        int index_ca = refinement_triangulation_get_middle_point(created_points_info, vertices, index_c, index_a);
+
+        indices.emplace_back(index_a, index_ab, index_ca);
+        indices.emplace_back(index_ab, index_b, index_bc);
+        indices.emplace_back(index_bc, index_c, index_ca);
+        indices.emplace_back(index_ab, index_bc, index_ca);
+    }
+
+    indexed_triangle_set new_mesh;
+    new_mesh.vertices = vertices;
+    new_mesh.indices  = indices;
+
+    return refinement_triangulation(new_mesh, iterations - 1);
+};
+
+int ConicalTransform::refinement_triangulation_get_middle_point(std::unordered_map<int, std::unordered_map<int, int>> &created_points_info,
+                                                                std::vector<stl_vertex>                               &vertices,
+                                                                int                                                    index_a,
+                                                                int                                                    index_b)
 {
-    const Vec3d point1     = triangle[0];
-    const Vec3d point2     = triangle[1];
-    const Vec3d point3     = triangle[2];
-    const Vec3d midpoint12 = (point1 + point2) / 2.0;
-    const Vec3d midpoint23 = (point2 + point3) / 2.0;
-    const Vec3d midpoint31 = (point3 + point1) / 2.0;
+    if (created_points_info.find(index_a) != created_points_info.end() &&
+        created_points_info[index_a].find(index_b) != created_points_info[index_a].end()) {
+        return created_points_info[index_a][index_b];
+    }
 
-    return {{point1, midpoint12, midpoint31},
-            {point2, midpoint23, midpoint12},
-            {point3, midpoint31, midpoint23},
-            {midpoint12, midpoint23, midpoint31}};
-}
+    if (created_points_info.find(index_b) != created_points_info.end() &&
+        created_points_info[index_b].find(index_a) != created_points_info[index_b].end()) {
+        return created_points_info[index_b][index_a];
+    }
 
-void ConicalTransform::transformation_kegel(const std::vector<Vec3d> &points,
-                          std::vector<Vec3d>       &points_transformed,
-                          double                   center_x,
-                          double                   center_y)
+    const auto point_a = vertices[index_a];
+    const auto point_b = vertices[index_b];
+
+    vertices.emplace_back((point_a[0] + point_b[0]) / 2.0, (point_a[1] + point_b[1]) / 2.0, (point_a[2] + point_b[2]) / 2.0);
+    const int middle_index                = vertices.size() - 1;
+    created_points_info[index_a][index_b] = middle_index;
+    return middle_index;
+};
+
+void ConicalTransform::transformation_kegel(indexed_triangle_set &mesh, float center_x, float center_y) const
 {
-    const int c = _config.opt_bool("inward_cone") ? -1 : 1;
+    const float c = _inward_cone ? -1 : 1;
+    const float cone_angle_rad = _cone_angle_rad;
 
-    for (const auto &point : points) {
-        double x = point[0] - center_x;
-        double y = point[1] - center_y;
-        double z = point[2] - _planar_height;
+    for (auto &vertex : mesh.vertices) {
+        const float x = vertex[0] - center_x;
+        const float y = vertex[1] - center_y;
 
-        Vec3d transformed_point(x / std::cos(_cone_angle_rad), y / std::cos(_cone_angle_rad),
-                                z + c * std::sqrt(x * x + y * y) * std::tan(_cone_angle_rad));
-
-        transformed_point[0] += center_x;
-        transformed_point[1] += center_y;
-        transformed_point[2] += _planar_height;
-
-        points_transformed.push_back(transformed_point);
+        vertex[0] = (x / std::cos(cone_angle_rad)) + center_x;
+        vertex[1] = (y / std::cos(cone_angle_rad)) + center_y;
+        vertex[2] += c * std::sqrt(x * x + y * y) * std::tan(cone_angle_rad);
     }
 }
-
 
 std::string ConicalTransform::apply_back_transform(const std::string &gcode_layer, double height) const
 {
@@ -170,24 +152,23 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
         }
 
         std::smatch x_match, y_match;
-        bool x_found = std::regex_search(last_match, x_match, _pattern_X);
-        bool y_found = std::regex_search(last_match, y_match, _pattern_Y);
+        bool        x_found = std::regex_search(last_match, x_match, _pattern_X);
+        bool        y_found = std::regex_search(last_match, y_match, _pattern_Y);
 
         if (x_found) {
-            _x_old    = std::stod(x_match.str().substr(1)) - _center_x;
+            _x_old = std::stod(x_match.str().substr(1)) - _center_x;
         }
         if (y_found) {
-            _y_old    = std::stod(y_match.str().substr(1)) - _center_y;
+            _y_old = std::stod(y_match.str().substr(1)) - _center_y;
         }
 
         return gcode_layer;
     }
 
-    const bool   inward_cone    = _config.opt_bool("inward_cone");
+    const bool inward_cone = _config.opt_bool("inward_cone");
 
     double x_new = 0, y_new = 0;
     double z_layer  = height;
-    double z_max    = 0;
     bool   update_x = false, update_y = false;
     int    c = inward_cone ? 1 : -1;
 
@@ -254,12 +235,11 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
                                                     (y_vals[i] - _center_y) * (y_vals[i] - _center_y)) *
                                           std::tan(_cone_angle_rad);
             }
-            if (e_found && (std::max_element(z_vals.begin(), z_vals.end()) != z_vals.end() || z_max == 0)) {
-                z_max = *std::max_element(z_vals.begin(), z_vals.end());
-            }
-            if (!e_found && std::max_element(z_vals.begin(), z_vals.end()) != z_vals.end()) {
+            if (e_found) {
+                _z_max = std::max(_z_max, *std::max_element(z_vals.begin(), z_vals.end()));
+            } else {
                 for (auto &z : z_vals) {
-                    z = std::min(z, z_max + 1);
+                    z = std::min(z, _z_max + 1);
                 }
             }
         }
@@ -279,17 +259,18 @@ std::string ConicalTransform::apply_back_transform(const std::string &gcode_laye
             std::string single_row = std::regex_replace(row_new, _pattern_X, "X" + std::to_string(round(x_vals[j + 1] * 1000.0) / 1000.0));
             single_row = std::regex_replace(single_row, _pattern_Y, "Y" + std::to_string(round(y_vals[j + 1] * 1000.0) / 1000.0));
             single_row = std::regex_replace(single_row, _pattern_Z,
-                                            "Z" + std::to_string(z_vals[j + 1] < _planar_height ? z_layer : round(z_vals[j + 1] * 1000.0) / 1000.0));
+                                            "Z" + std::to_string(z_vals[j + 1] < _planar_height ? z_layer :
+                                                                                                  round(z_vals[j + 1] * 1000.0) / 1000.0));
             single_row = replace_E(single_row, distances_transformed[j], distances_bt[j], 1);
             replacement_rows += single_row + "\n";
         }
 
         if (update_x) {
-            _x_old    = x_new;
+            _x_old   = x_new;
             update_x = false;
         }
         if (update_y) {
-            _y_old    = y_new;
+            _y_old   = y_new;
             update_y = false;
         }
 
@@ -390,4 +371,4 @@ std::string ConicalTransform::insert_U(const std::string &row, double angle) con
     return row_new;
 }
 
-}
+} // namespace Slic3r

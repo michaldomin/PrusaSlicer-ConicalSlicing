@@ -1431,7 +1431,7 @@ void GCodeGenerator::_do_export(Print& print, GCodeOutputStream &file, Thumbnail
         }
     }
 
-    print.conical_transform()->resetSavedPosition();
+    print.conical_transform()->reset_saved_values();
 
     print.throw_if_canceled();
 }

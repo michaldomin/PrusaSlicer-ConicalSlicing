@@ -14,10 +14,10 @@ namespace Slic3r {
 struct ObjectInfo
 {
     TriangleMesh mesh;
-    std::string name;
+    std::string  name;
 };
 
-enum ConeType{ outward, inward};
+enum ConeType { outward, inward };
 
 class ConicalTransform
 {
@@ -42,21 +42,24 @@ public:
 
     void clear_backup() { meshes_backup.clear(); }
 
-    void resetSavedPosition() const
+    void reset_saved_values() const
     {
         _x_old = _center_x;
         _y_old = _center_y;
+        _z_max = 0;
     }
 
 private:
-    DynamicPrintConfig _config;
+    DynamicPrintConfig      _config;
     std::vector<ObjectInfo> meshes_backup;
-    double _cone_angle_rad;
+    double                  _cone_angle_rad;
+    mutable bool          _inward_cone;
     double                  _center_x;
     double                  _center_y;
     double                  _planar_height;
     mutable double          _x_old;
     mutable double          _y_old;
+    mutable double          _z_max;
 
     std::regex _pattern_X;
     std::regex _pattern_Y;
@@ -65,12 +68,15 @@ private:
     std::regex _pattern_U;
     std::regex _pattern_G;
 
-
-    TriangleMesh                             apply_transformation_on_one_mesh(TriangleMesh mesh);
+    TriangleMesh                                                apply_transformation_on_one_mesh(TriangleMesh mesh);
     const std::pair<indexed_triangle_set, indexed_triangle_set> cut_planar_bottom(ModelObject *object);
-    std::vector<std::array<Vec3d, 3>>        refinement_triangulation(const std::vector<std::array<Vec3d, 3>> &triangles);
-    static std::vector<std::array<Vec3d, 3>> refinement_four_triangles(const std::array<Vec3d, 3> &triangle);
-    void transformation_kegel(const std::vector<Vec3d> &points, std::vector<Vec3d> &points_transformed, double center_x, double center_y);
+
+    indexed_triangle_set refinement_triangulation(indexed_triangle_set &mesh, int iterations) const;
+    static int refinement_triangulation_get_middle_point(std::unordered_map<int, std::unordered_map<int, int>> &created_points_info,
+                                                         std::vector<stl_vertex>                               &vertices,
+                                                         int                                                    index_a,
+                                                         int                                                    index_b);
+    void       transformation_kegel(indexed_triangle_set &mesh, float center_x, float center_y) const;
 
     std::string         insert_Z(const std::string &row, double z_value) const;
     std::string         replace_E(const std::string &row, double dist_old, double dist_new, double corr_value) const;
@@ -78,12 +84,9 @@ private:
     std::vector<double> compute_U_values(const std::vector<double> &angle_array) const;
     std::string         insert_U(const std::string &row, double angle) const;
 
-    indexed_triangle_set copy_mesh(const TriangleMesh &mesh)
-    {
-        return copy_mesh(mesh.its);
-    }
+    indexed_triangle_set copy_mesh(const TriangleMesh &mesh) const { return copy_mesh(mesh.its); }
 
-    indexed_triangle_set copy_mesh(const indexed_triangle_set &mesh)
+    indexed_triangle_set copy_mesh(const indexed_triangle_set &mesh) const
     {
         indexed_triangle_set copied_mesh;
 
@@ -93,6 +96,6 @@ private:
         return copied_mesh;
     }
 };
-};
+}; // namespace Slic3r
 
 #endif
