@@ -1449,6 +1449,10 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
     if (apply_status == APPLY_STATUS_CHANGED || apply_status == APPLY_STATUS_INVALIDATED)
         this->cleanup();
 
+    if (m_conical_transform == nullptr) {
+        m_conical_transform = new ConicalTransform();
+    }
+
 #ifdef _DEBUG
     check_model_ids_equal(m_model, model);
 #endif /* _DEBUG */

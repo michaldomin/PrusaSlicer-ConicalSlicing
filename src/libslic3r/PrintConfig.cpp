@@ -3481,6 +3481,79 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(85, true));
 
+    //conical slicing options
+
+    def           = this->add("active_conical_slicing", coBool);
+    def->label    = L("Active conical slicing");
+    def->category = L("Conical");
+    def->tooltip  = L("Enable conical slicing");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def           = this->add("non_planar_angle", coInt);
+    def->label    = L("Non planar slicing max angle");
+    def->category = L("Conical");
+    def->tooltip  = L("Set non planar slicing max angle");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def           = this->add("planar_height", coFloat);
+    def->label    = L("Skip transformation to height");
+    def->category = L("Conical");
+    def->tooltip  = L("Skipping Transformation for all layers below seated height.\n"
+                      "Allows for better adhesion and first layer surface.\n"
+                      "Its recommended to always use height of first layer!");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionFloat(0.2));
+
+    def           = this->add("refinement_iterations", coInt);
+    def->label    = L("Number of refinement_triangulation iterations");
+    def->category = L("Conical");
+    def->tooltip  = L("If sliced object not looks how it should increase it.\nIf slicing takes to long decrease it.");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def           = this->add("use_own_transformation_center", coBool);
+    def->label    = L("Use own transformation center");
+    def->category = L("Conical");
+    def->tooltip  = L("Makes transformation algorithm use provided by you transformation center instead of taking center of object bounding box.");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def           = this->add("transformation_center_x", coFloat);
+    def->label    = L("Transformation Center X:");
+    def->category = L("Conical");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def           = this->add("transformation_center_y", coFloat);
+    def->label    = L("Transformation Center Y:");
+    def->category = L("Conical");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def           = this->add("auto_object_fix", coBool);
+    def->label    = L("Auto objects fix after transformation");
+    def->category = L("Conical");
+    def->tooltip  = L("Uses fixing by Windows repair algorithm to automaticly fix objct after transforamiton."
+                    "Drasticly increeses tranformation time, use only if object after transforation is destoryed.");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def           = this->add("inward_cone", coBool);
+    def->label    = L("Inward cone type");
+    def->category = L("Conical");
+    def->tooltip  = L("Select only for shape you are sure it will work correctly.");
+    def->mode     = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def           = this->add("non_planar_max_height", coFloat);
+    def->label    = L("Non planar slicing max height");
+    def->category = L("Conical");
+    def->tooltip  = L("Set non planar slicing max height");
+    def->mode     = comSimple;
+    def->set_default_value(new ConfigOptionFloat(0));
+
     // Declare retract values for filament profile, overriding the printer's extruder profile.
     for (const char *opt_key : {
         // floats

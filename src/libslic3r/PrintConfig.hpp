@@ -555,6 +555,18 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt,                 wall_distribution_count))
     ((ConfigOptionFloatOrPercent,      min_feature_size))
     ((ConfigOptionFloatOrPercent,      min_bead_width))
+    //Conical slicing options
+    ((ConfigOptionBool,                active_conical_slicing))
+    ((ConfigOptionInt,                 non_planar_angle))
+    ((ConfigOptionFloat,               planar_height))
+    ((ConfigOptionInt,                 refinement_iterations))
+    ((ConfigOptionBool,                use_own_transformation_center))
+    ((ConfigOptionFloat,               transformation_center_x))
+    ((ConfigOptionFloat,               transformation_center_y))
+    ((ConfigOptionBool,                auto_object_fix))
+    ((ConfigOptionBool,                inward_cone))
+    ((ConfigOptionFloat,               non_planar_max_height))
+
     ((ConfigOptionBool,                support_material))
     // Automatic supports (generated based fdm support point generator).
     ((ConfigOptionBool,                support_material_auto))

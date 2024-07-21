@@ -1430,6 +1430,9 @@ void GCodeGenerator::_do_export(Print& print, GCodeOutputStream &file, Thumbnail
             file.write("; prusaslicer_config = end\n");
         }
     }
+
+    print.conical_transform()->reset_saved_values();
+
     print.throw_if_canceled();
 }
 
@@ -2332,7 +2335,13 @@ LayerResult GCodeGenerator::process_layer(
     BOOST_LOG_TRIVIAL(trace) << "Exported layer " << layer.id() << " print_z " << print_z <<
     log_memory_info();
 
-    result.gcode = std::move(gcode);
+    if (config().opt_bool("active_conical_slicing")) {
+        result.gcode = print.conical_transform()->apply_back_transform(gcode, print_z);
+    } else {
+        result.gcode = std::move(gcode);
+    }
+
+    //result.gcode                = std::move(gcode);
     result.cooling_buffer_flush = object_layer || raft_layer || last_layer;
     return result;
 }
