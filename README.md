@@ -1,3 +1,25 @@
+# Prusa Slicer fork with implementation of conical slicing idea.
+## Inspiration:
+    https://www.researchgate.net/publication/354726760_A_Novel_Slicing_Strategy_to_Print_Overhangs_without_Support_Material
+    https://www.cnckitchen.com/blog/guide-how-to-use-conical-slicing
+    https://www.youtube.com/watch?v=1i-1TEdByZY&ab_channel=CNCKitchen
+
+## Conical Transforamtion and Backtransforamtion algoritms are based on:
+    https://github.com/RotBotSlicer/Transform
+
+## Not working Options:
+- Inward cone type
+- Non planar slicing max height
+
+## Additional features:
+- Skiping transformation to certain hieght (makes all leyers below this height sliced clasical, for example thanks to making fits layer still planar allows for better adhesian and better looking first surface)
+
+## Planed features:
+- Support for multiple objects
+- Inward cone option
+- Sub cone slicing for more advanced Objects slicing
+
+
 
 ![PrusaSlicer logo](/resources/icons/PrusaSlicer.png?raw=true)
 
