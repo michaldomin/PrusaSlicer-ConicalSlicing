@@ -295,6 +295,8 @@ set(SLIC3R_SOURCES
     Arrange/Core/NFP/Kernels/KernelUtils.hpp
     ConicalTransform.cpp
     ConicalTransform.hpp
+    Cone.cpp
+    Cone.hpp
     MultiPoint.cpp
     MultiPoint.hpp
     MutablePriorityQueue.hpp

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <regex>
 #include "CutUtils.hpp"
+#include "Cone.hpp"
 
 namespace Slic3r {
 

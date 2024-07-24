@@ -5,12 +5,18 @@ std::vector<ObjectInfo> ConicalTransform::apply_transform(const Model &model, co
 {
     meshes_backup.clear();
     _config = config;
+    _cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
 
     for (const auto &modelObject : model.objects) {
-        meshes_backup.push_back({modelObject->mesh(), modelObject->name});
+        const auto mesh = modelObject->mesh();
+        std::cout<< "Mesh center: " << mesh.center() << std::endl;
+        std::cout << "Mesh min: " << mesh.bounding_box().min[2] << std::endl;
+
+        auto cone = new Cone(mesh.center(), 1, _cone_angle_rad);
+        std::cout<< "Cone height: " << cone->getHeight() << std::endl;
+        meshes_backup.push_back({mesh, modelObject->name});
     }
 
-    _cone_angle_rad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
     _planar_height  = _config.opt_float("planar_height");
 
     if (_config.opt_bool("use_own_transformation_center")) {
