@@ -3532,43 +3532,43 @@ bool Plater::priv::restart_background_process(unsigned int state)
 }
 
 void Plater::priv::apply_conical_transformation() {
-    if (wxGetApp().preset_bundle->full_config().opt_bool("active_conical_slicing")) {
-        if (!fff_print.conical_transform()->is_backup_empty())
-            return;
+     if (wxGetApp().preset_bundle->full_config().opt_bool("active_conical_slicing")) {
+         if (!fff_print.conical_transform()->isBackupEmpty())
+             return;
 
-        BOOST_LOG_TRIVIAL(info) << "Applying conical transformation";
+         BOOST_LOG_TRIVIAL(info) << "Applying conical transformation";
 
-        const auto meshes = fff_print.conical_transform()->apply_transform(model, wxGetApp().preset_bundle->full_config());
+         const auto meshes = fff_print.conical_transform()->applyTransform(model, wxGetApp().preset_bundle->full_config());
 
-        this->sidebar->obj_list()->delete_all_objects_from_list();
-        model.clear_objects();
+         this->sidebar->obj_list()->delete_all_objects_from_list();
+         model.clear_objects();
 
-        for(auto mesh : meshes)
-            this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
+         for(auto mesh : meshes)
+             this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
 
-        if (wxGetApp().preset_bundle->full_config().opt_bool("auto_object_fix")) {
-            this->sidebar
-               ->obj_list()->fix_through_winsdk();
-        }
+         if (wxGetApp().preset_bundle->full_config().opt_bool("auto_object_fix")) {
+             this->sidebar
+                ->obj_list()->fix_through_winsdk();
+         }
 
-        background_process.apply(q->model(), wxGetApp().preset_bundle->full_config());
-    }
+         background_process.apply(q->model(), wxGetApp().preset_bundle->full_config());
+     }
 }
 
 void Plater::priv::load_oryginal_meshes()
 {
-    auto meshes_backup = fff_print.conical_transform()->get_backup();
-    if (meshes_backup.empty())
-		return;
+     auto meshes_backup = fff_print.conical_transform()->getBackup();
+     if (meshes_backup.empty())
+	 	return;
 
-    this->sidebar->obj_list()->delete_all_objects_from_list();
+     this->sidebar->obj_list()->delete_all_objects_from_list();
 
-    model.clear_objects();
+     model.clear_objects();
 
-    for (auto mesh : meshes_backup)
-		this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
+     for (auto mesh : meshes_backup)
+	 	this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
 
-    fff_print.conical_transform()->clear_backup();
+     fff_print.conical_transform()->clearBackup();
 }
 
 void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)

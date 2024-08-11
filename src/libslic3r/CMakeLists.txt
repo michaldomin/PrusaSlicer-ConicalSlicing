@@ -294,7 +294,11 @@ set(SLIC3R_SOURCES
     Arrange/Core/NFP/Kernels/SVGDebugOutputKernelWrapper.hpp
     Arrange/Core/NFP/Kernels/KernelUtils.hpp
     ConicalTransform.cpp
+    ConicalTransformBackward.cpp
+    ConicalTransformForward.cpp
     ConicalTransform.hpp
+    ConicalUtils.cpp
+    ConicalUtils.hpp
     Cone.cpp
     Cone.hpp
     MultiPoint.cpp

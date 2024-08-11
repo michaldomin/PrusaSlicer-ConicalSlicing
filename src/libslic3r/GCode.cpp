@@ -1431,7 +1431,7 @@ void GCodeGenerator::_do_export(Print& print, GCodeOutputStream &file, Thumbnail
         }
     }
 
-    print.conical_transform()->reset_saved_values();
+    print.conical_transform()->resetSavedValues();
 
     print.throw_if_canceled();
 }
@@ -2336,7 +2336,7 @@ LayerResult GCodeGenerator::process_layer(
     log_memory_info();
 
     if (config().opt_bool("active_conical_slicing")) {
-        result.gcode = print.conical_transform()->apply_back_transform(gcode, print_z);
+        result.gcode = print.conical_transform()->applyBackTransform(gcode, print_z);
     } else {
         result.gcode = std::move(gcode);
     }
