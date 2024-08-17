@@ -7,6 +7,15 @@
 ## Conical Transforamtion and Backtransforamtion algoritms are based on:
     https://github.com/RotBotSlicer/Transform
 
+## Recomendations about Settings
+To ensure this slicer is safe for your printer, it is recommended to:
+- Enable the "Avoid crossing perimeters" option.
+- Set the "Max non-planar angle" lower than the maximum your printer can handle.
+
+### How to Measure the Max Non-Planar Angle for Your Printer:
+![Non planar Angle](/resources/images/MaxNonPlanarAngle.png)
+I used a standard school protractor to measure these angles.
+
 ## Not working Options:
 - Inward cone type
 - Non planar slicing max height
@@ -19,7 +28,7 @@
 - Inward cone option
 - Sub cone slicing for more advanced Objects slicing
 
-
+# Oryginal readme
 
 ![PrusaSlicer logo](/resources/icons/PrusaSlicer.png?raw=true)
 
