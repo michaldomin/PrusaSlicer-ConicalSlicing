@@ -2,30 +2,30 @@
 
 namespace Slic3r {
 
- std::vector<ObjectInfo> ConicalTransform::applyTransform(const Model &model, const DynamicPrintConfig &config)
+ std::vector<BackupObjectInfo> ConicalTransform::applyTransform(const Model &model, const DynamicPrintConfig &config)
  {
-     _meshesBackup.clear();
+     _backupObjectsInfo.clear();
+     _objectsInfo.clear();
      _config = config;
      _coneAngleRad = _config.opt_int("non_planar_angle") * M_PI / 180.0;
 
      for (const auto &modelObject : model.objects) {
          const auto mesh = modelObject->mesh();
-         //auto cone = new Cone(mesh.center(), 1, _coneAngleRad);
-         _meshesBackup.push_back({mesh, modelObject->name});
-     }
+         _objectsInfo.push_back({modelObject, Cone(modelObject, _coneAngleRad)});
+         std::cout << _backupObjectsInfo.back().boundingCone.getHeight() << std::endl;
+         std::cout << _backupObjectsInfo.back().boundingCone.getRadius() << std::endl;
+     } 
 
      _planarHeight = _config.opt_float("planar_height");
+     _useTransformationCenter = _config.opt_bool("use_own_transformation_center");
 
-     if (_config.opt_bool("use_own_transformation_center")) {
+     if (_useTransformationCenter) {
          _centerX = _config.opt_float("transformation_center_x");
          _centerY = _config.opt_float("transformation_center_y");
-     } else {
-         _centerX = _meshesBackup[0].mesh.center().x();
-         _centerY = _meshesBackup[0].mesh.center().y();
      }
      resetSavedValues();
 
-     std::vector<ObjectInfo> newMeshes;
+     std::vector<BackupObjectInfo> newMeshes;
 
      for (const auto &modelObject : model.objects) {
          TriangleMesh transformedMesh;

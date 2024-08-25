@@ -3533,7 +3533,7 @@ bool Plater::priv::restart_background_process(unsigned int state)
 
 void Plater::priv::apply_conical_transformation() {
      if (wxGetApp().preset_bundle->full_config().opt_bool("active_conical_slicing")) {
-         if (!fff_print.conical_transform()->isBackupEmpty())
+         if (!fff_print.conical_transform()->isObjectsInfoEmpty())
              return;
 
          BOOST_LOG_TRIVIAL(info) << "Applying conical transformation";
@@ -3568,7 +3568,7 @@ void Plater::priv::load_oryginal_meshes()
      for (auto mesh : meshes_backup)
 	 	this->sidebar->obj_list()->load_mesh_object(mesh.mesh, mesh.name, false);
 
-     fff_print.conical_transform()->clearBackup();
+     fff_print.conical_transform()->clearObjectsInfo();
 }
 
 void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)

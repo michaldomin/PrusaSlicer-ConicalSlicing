@@ -4,12 +4,14 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <stdexcept>
+#include "libslic3r/Model.hpp"
 
 namespace Slic3r {
 
 class Cone {
 public:
     Cone(const Vec3d& center, double radius, double angle);
+    Cone(const ModelObject *object, double angle);
 
     Vec3d getCenter() const;
     double getRadius() const;
@@ -22,11 +24,14 @@ public:
 
     bool isPointinCone(const Vec3d& point) const;
 
-    void resizeToContainPoint(const Vec3d& point);
+    void resizeToContainPoint(const stl_vertex &point);
+    void resizeToContainAllPoints(const std::vector<stl_vertex> points);
 
     bool isCollidingWith(const Cone& other) const;
 
-    double getRadiusAtHeight(double height) const;
+    double getRadiusAtZ(double z) const;
+
+    static void checkForCollisions(const std::vector<Cone> &cones);
 
 private:
     Vec3d center_;

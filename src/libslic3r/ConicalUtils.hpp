@@ -8,9 +8,12 @@
 
 namespace Slic3r {
 
-class ConicalUtils {
+class ConicalUtils
+{
 public:
-    static Eigen::Vector3f interpolatePoint(const Eigen::Vector3f& pointA, const Eigen::Vector3f& pointB);
+    static Eigen::Vector3f interpolatePoint(const Eigen::Vector3f &pointA, const Eigen::Vector3f &pointB);
+    static double          distanceXY(const Vec3d &point1, const Vec3d &point2);
+    static double          distanceXY(const stl_vertex &point1, const Vec3d &point2);
 };
 
 } // namespace Slic3r
